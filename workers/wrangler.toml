@@ -13,3 +13,5 @@ migrations_dir = "migrations"
 
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,https://cur-sur-demo.vercel.app,https://any3mi.pages.dev"
+EMAIL_FROM = "ANY3MI <onboarding@resend.dev>"
+APP_URL = "https://cur-sur-demo.vercel.app"

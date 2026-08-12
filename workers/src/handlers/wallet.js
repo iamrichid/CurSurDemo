@@ -1,5 +1,6 @@
 import { authenticateRequest } from '../auth.js'
 import { hasDatabase } from '../db.js'
+import { sendWalletTopUpEmail } from '../email.js'
 import { corsHeaders, errorResponse, json } from '../http.js'
 import { getWallet, processTopUp } from '../wallet.js'
 
@@ -86,6 +87,25 @@ export async function handleTopUp(request, env) {
     )
   }
 
+  const account = authResult.auth.account
+  let email_sent = false
+  try {
+    const emailResult = await sendWalletTopUpEmail(env, {
+      email: account.email,
+      orgName: account.org_name,
+      amountGhs: result.amount,
+      balanceGhs: result.balance,
+      accountId: account.id,
+      txId: result.transaction_id,
+    })
+    email_sent = emailResult.ok
+    if (!emailResult.ok && !emailResult.skipped) {
+      console.error('Top-up email failed:', emailResult.message)
+    }
+  } catch (err) {
+    console.error('Top-up email error:', err)
+  }
+
   return json(
     {
       status: 'success',
@@ -96,6 +116,7 @@ export async function handleTopUp(request, env) {
       reference: result.reference,
       transaction_id: result.transaction_id,
       mode: result.mode,
+      email_sent,
     },
     200,
     authResult.headers

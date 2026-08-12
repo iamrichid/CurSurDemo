@@ -70,6 +70,9 @@ async function handleRegister() {
     setSession({ api_key: data.api_key, account: data.account })
     newApiKey.value = data.api_key
     toast.success('Account created — welcome credit applied')
+    if (data.email_sent) {
+      toast.info('Welcome email sent — check your inbox')
+    }
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Registration failed.'
@@ -121,6 +124,9 @@ async function handleRegenerate() {
     newApiKey.value = data.api_key
     needsKey.value = false
     toast.success('New API key generated')
+    if (data.email_sent) {
+      toast.info('Security notice sent to your email')
+    }
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not regenerate key.'

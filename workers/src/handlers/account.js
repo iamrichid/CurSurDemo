@@ -8,6 +8,7 @@ import {
   saveRates,
 } from '../db.js'
 import { authenticateRequest } from '../auth.js'
+import { sendKeyRotatedEmail, sendWelcomeEmail } from '../email.js'
 import { corsHeaders, errorResponse, json } from '../http.js'
 
 function dbRequired(request, env) {
@@ -25,6 +26,19 @@ function dbRequired(request, env) {
     }
   }
   return { ok: true, headers }
+}
+
+async function dispatchEmail(label, sendFn) {
+  try {
+    const result = await sendFn()
+    if (!result.ok && !result.skipped) {
+      console.error(`${label} email failed:`, result.message)
+    }
+    return result.ok
+  } catch (err) {
+    console.error(`${label} email error:`, err)
+    return false
+  }
 }
 
 export async function handleRegister(request, env) {
@@ -56,7 +70,14 @@ export async function handleRegister(request, env) {
       email,
       password,
     })
-    return json({ status: 'success', ...result }, 201, headers)
+    const email_sent = await dispatchEmail('Welcome', () =>
+      sendWelcomeEmail(env, {
+        email: result.account.email,
+        orgName: result.account.org_name,
+        accountId: result.account.id,
+      })
+    )
+    return json({ status: 'success', ...result, email_sent }, 201, headers)
   } catch (err) {
     if (String(err).includes('UNIQUE')) {
       return errorResponse(
@@ -120,7 +141,17 @@ export async function handleRegenerateKey(request, env) {
     )
   }
 
-  return json({ status: 'success', ...result }, 200, headers)
+  const email_sent = await dispatchEmail('Key rotated', () =>
+    sendKeyRotatedEmail(env, {
+      email: result.account.email,
+      orgName: result.account.org_name,
+      keyPrefix: result.key_prefix,
+      accountId: result.account.id,
+      action: 'regenerate',
+    })
+  )
+
+  return json({ status: 'success', ...result, email_sent }, 200, headers)
 }
 
 export async function handleMe(request, env) {

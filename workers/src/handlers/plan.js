@@ -1,5 +1,6 @@
 import { authenticateRequest } from '../auth.js'
 import { hasDatabase, rotateApiKey } from '../db.js'
+import { sendKeyRotatedEmail } from '../email.js'
 import { corsHeaders, errorResponse, json } from '../http.js'
 import { getPlanStatus } from '../plans.js'
 
@@ -63,12 +64,32 @@ export async function handleRotateKey(request, env) {
   if (!authResult.ok) return authResult.response
 
   const rotated = await rotateApiKey(env.DB, authResult.auth.account.id)
+  const account = authResult.auth.account
+
+  let email_sent = false
+  try {
+    const emailResult = await sendKeyRotatedEmail(env, {
+      email: account.email,
+      orgName: account.org_name,
+      keyPrefix: rotated.key_prefix,
+      accountId: account.id,
+      action: 'rotate',
+    })
+    email_sent = emailResult.ok
+    if (!emailResult.ok && !emailResult.skipped) {
+      console.error('Key rotate email failed:', emailResult.message)
+    }
+  } catch (err) {
+    console.error('Key rotate email error:', err)
+  }
+
   return json(
     {
       status: 'success',
       api_key: rotated.api_key,
       key_prefix: rotated.key_prefix,
       message: 'Previous API keys have been revoked.',
+      email_sent,
     },
     200,
     authResult.headers

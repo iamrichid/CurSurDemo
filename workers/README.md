@@ -44,6 +44,7 @@ cd workers
 npm install
 npx wrangler login
 npx wrangler secret put ORS_API_KEY
+npx wrangler secret put RESEND_API_KEY
 npm run db:migrate:remote   # Phase 2 — accounts, usage, rates
 npm run deploy
 ```
@@ -66,6 +67,31 @@ npm run deploy
 | `POST` | `/v1/quote` | Bearer | Quote (free tier then GH₵ 0.10/call) |
 
 After deploy, open `/dashboard/login` on the frontend to register. Copy your API key, then set `VITE_ANY3MI_API_KEY` in Vercel so the public playground can authenticate.
+
+## Email (Resend)
+
+Transactional email is sent via [Resend](https://resend.com) when `RESEND_API_KEY` is configured:
+
+| Event | Email |
+|-------|-------|
+| Registration | Welcome + wallet credit summary |
+| API key regenerate / rotate | Security notice (key prefix only — never the full secret) |
+| Wallet top-up | Receipt with new balance |
+
+```bash
+npx wrangler secret put RESEND_API_KEY
+```
+
+Optional vars in `wrangler.toml`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMAIL_FROM` | `ANY3MI <onboarding@resend.dev>` | Sender — use your verified domain in production |
+| `APP_URL` | `https://cur-sur-demo.vercel.app` | Links in email templates |
+
+For local dev, add `RESEND_API_KEY` to `workers/.dev.vars`. Resend's sandbox domain `onboarding@resend.dev` works for testing to your own verified email.
+
+Health check reports email status: `GET /v1/health` → `"email": "resend"` or `"unconfigured"`.
 
 Wrangler prints your worker URL, e.g. `https://any3mi-api.<account>.workers.dev`.
 
@@ -90,6 +116,9 @@ Restart `npm run dev` and use the landing playground.
 | Variable | Where | Required | Description |
 |----------|-------|----------|-------------|
 | `ORS_API_KEY` | Secret | Yes | OpenRouteService API key |
+| `RESEND_API_KEY` | Secret | No | Resend API key for transactional email |
+| `EMAIL_FROM` | `wrangler.toml` | No | Sender address (must match verified Resend domain) |
+| `APP_URL` | `wrangler.toml` | No | Frontend URL for links in emails |
 | `ANY3MI_API_KEYS` | Secret | No | Comma-separated Bearer tokens; omit to allow unauthenticated quotes |
 | `ALLOWED_ORIGINS` | `wrangler.toml` | No | CORS origins (comma-separated) |
 

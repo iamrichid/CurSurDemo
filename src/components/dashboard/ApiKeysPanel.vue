@@ -33,6 +33,9 @@ async function handleRotate() {
     newApiKey.value = data.api_key
     keyPrefix.value = data.key_prefix
     toast.success('API key rotated — copy your new key now')
+    if (data.email_sent) {
+      toast.info('Security notice sent to your email')
+    }
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not rotate API key.'

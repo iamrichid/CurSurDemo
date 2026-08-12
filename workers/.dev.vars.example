@@ -1,4 +1,6 @@
 # Copy to .dev.vars for local wrangler dev (never commit .dev.vars)
 ORS_API_KEY=your_openrouteservice_api_key
+# Resend — transactional email (https://resend.com)
+RESEND_API_KEY=re_your_resend_api_key
 # Optional — require Authorization: Bearer <key> (comma-separated list)
 # ANY3MI_API_KEYS=a3_test_sk_demo,a3_live_sk_demo

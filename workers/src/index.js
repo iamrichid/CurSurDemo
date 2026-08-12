@@ -4,6 +4,7 @@ import {
 } from '../../src/utils/pricing.js'
 import { authenticateRequest } from './auth.js'
 import { getRates, hasDatabase, logQuote } from './db.js'
+import { isEmailConfigured } from './email.js'
 import { corsHeaders, errorResponse, json, rateLimitResponse } from './http.js'
 import {
   checkRateLimit,
@@ -21,9 +22,10 @@ async function handleHealth(request, env) {
     {
       status: 'ok',
       service: 'any3mi-api',
-      version: '4.0.0',
+      version: '4.1.0',
       routing: env.ORS_API_KEY ? 'openrouteservice' : 'unconfigured',
       database: hasDatabase(env) ? 'connected' : 'unconfigured',
+      email: isEmailConfigured(env) ? 'resend' : 'unconfigured',
     },
     200,
     headers

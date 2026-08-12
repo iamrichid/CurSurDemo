@@ -78,6 +78,9 @@ async function handleTopUp() {
     lastTopUpAmount.value = data.amount
     topUpSuccess.value = true
     toast.success(`Top-up successful — GH₵ ${data.amount.toFixed(2)} added`)
+    if (data.email_sent) {
+      toast.info('Receipt sent to your email')
+    }
     const account = getAccount()
     if (account) {
       setSession({ account: { ...account, wallet_balance: data.balance } })
