@@ -33,6 +33,16 @@ export function errorResponse(code, name, message, status, extraHeaders = {}) {
   )
 }
 
+export function rateLimitResponse(retryAfter, extraHeaders = {}) {
+  return errorResponse(
+    'RATE_LIMITED',
+    'RATE_LIMITED',
+    `Exceeded plan rate limit. Retry after ${retryAfter} seconds.`,
+    429,
+    { 'Retry-After': String(retryAfter), ...extraHeaders }
+  )
+}
+
 export function checkApiKey(request, env) {
   const keysRaw = env.ANY3MI_API_KEYS
   if (!keysRaw || !keysRaw.trim()) return { ok: true }

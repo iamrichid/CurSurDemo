@@ -52,6 +52,7 @@ export const vehicles = [
 ]
 
 export const errors = [
+  { code: 402, name: 'INSUFFICIENT_BALANCE', desc: 'Wallet balance too low for another API call.' },
   { code: 400, name: 'INVALID_COORDINATES', desc: 'Lat/lng out of supported Ghana bounds.' },
   { code: 401, name: 'UNAUTHORIZED', desc: 'Missing or invalid API key.' },
   { code: 422, name: 'UNSUPPORTED_VEHICLE', desc: 'Vehicle type not recognized.' },

@@ -40,6 +40,11 @@ const router = createRouter({
           component: () => import('../components/dashboard/BillingPanel.vue'),
         },
         {
+          path: 'keys',
+          name: 'dashboard-keys',
+          component: () => import('../components/dashboard/ApiKeysPanel.vue'),
+        },
+        {
           path: 'pricing',
           name: 'dashboard-pricing',
           component: () => import('../components/dashboard/PricingMatrix.vue'),

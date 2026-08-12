@@ -67,6 +67,8 @@ async function resetRates() {
 
 onMounted(loadRates)
 
+const vehicleAbbr = { bicycle: 'Bi', motorbike: 'Mo', car: 'Ca' }
+
 const fieldLabels = {
   baseFare: 'Base Fare (GH₵)',
   perKm: 'Per KM Rate (GH₵)',
@@ -116,8 +118,8 @@ const fieldLabels = {
         :enter="{ opacity: 1, y: 0, transition: { delay: vi * 100, duration: 400 } }"
       >
         <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-text">
-          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted text-xs">
-            {{ vehicle === 'bicycle' ? '🚲' : vehicle === 'motorbike' ? '🏍️' : '🚗' }}
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted text-[10px] font-bold uppercase text-accent">
+            {{ vehicleAbbr[vehicle] }}
           </span>
           {{ rates[vehicle].label }}
         </h2>

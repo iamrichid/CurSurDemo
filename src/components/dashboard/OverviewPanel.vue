@@ -22,6 +22,7 @@ const chartData = ref([
   { label: 'Sun', value: 0 },
 ])
 const vehicleBreakdown = ref([])
+const plan = ref(null)
 
 const vehicleLabels = {
   bicycle: 'Bicycle',
@@ -52,6 +53,7 @@ onMounted(async () => {
       pct: row.pct,
       color: vehicleColors[row.vehicle] || 'bg-accent',
     }))
+    plan.value = data.plan || null
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not load usage data.'
@@ -75,6 +77,30 @@ onMounted(async () => {
     <p v-if="error" class="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
       {{ error }}
     </p>
+
+    <div v-if="plan" class="mb-6 ft-card-glow p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-text-subtle">Free tier this month</p>
+          <p class="mt-1 text-sm text-text-muted">
+            {{ plan.free_tier_used }} / {{ plan.free_tier_limit }} calls
+            <span v-if="plan.on_payg" class="text-accent">· now on pay-as-you-go</span>
+          </p>
+        </div>
+        <span class="rounded-md bg-accent-muted px-2 py-1 font-mono text-xs text-accent">
+          {{ plan.free_tier_remaining }} free left
+        </span>
+      </div>
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-surface-muted">
+        <div
+          class="h-full rounded-full bg-accent transition-all duration-700"
+          :style="{ width: `${Math.min(100, (plan.free_tier_used / plan.free_tier_limit) * 100)}%` }"
+        />
+      </div>
+      <p class="mt-2 text-[10px] text-text-subtle">
+        Rate limit: {{ plan.rate_limit_per_minute }} requests/min · PAYG: GH₵ {{ plan.payg_cost_per_call.toFixed(2) }}/call after free tier
+      </p>
+    </div>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div

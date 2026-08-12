@@ -5,10 +5,11 @@ import {
 } from '../utils/pricing.js'
 
 export class QuoteApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code) {
     super(message)
     this.name = 'QuoteApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -44,10 +45,16 @@ export async function fetchQuote({ origin, destination, vehicle }) {
 
     if (!response.ok) {
       const body = await response.text()
-      throw new QuoteApiError(
-        response.status,
-        body || `Quote request failed (${response.status})`
-      )
+      let code = 'QUOTE_FAILED'
+      let message = body || `Quote request failed (${response.status})`
+      try {
+        const parsed = JSON.parse(body)
+        code = parsed?.error?.name || code
+        message = parsed?.error?.message || message
+      } catch {
+        // keep defaults
+      }
+      throw new QuoteApiError(response.status, message, code)
     }
 
     return response.json()

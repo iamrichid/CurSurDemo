@@ -78,3 +78,22 @@ export async function fetchRates() {
 export async function saveRates(rates) {
   return request('/v1/rates', { method: 'PUT', body: { rates } })
 }
+
+export async function fetchWallet() {
+  return request('/v1/wallet')
+}
+
+export async function topUpWallet({ provider, phone, amount }) {
+  return request('/v1/wallet/topup', {
+    method: 'POST',
+    body: { provider, phone, amount },
+  })
+}
+
+export async function fetchPlan() {
+  return request('/v1/plan')
+}
+
+export async function rotateApiKey() {
+  return request('/v1/keys/rotate', { method: 'POST' })
+}

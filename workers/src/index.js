@@ -4,9 +4,16 @@ import {
 } from '../../src/utils/pricing.js'
 import { authenticateRequest } from './auth.js'
 import { getRates, hasDatabase, logQuote } from './db.js'
-import { corsHeaders, errorResponse, json } from './http.js'
+import { corsHeaders, errorResponse, json, rateLimitResponse } from './http.js'
+import {
+  checkRateLimit,
+  COST_PER_CALL,
+  getMonthlyQuoteCount,
+  shouldChargeForQuote,
+} from './plans.js'
 import { fetchRouteMetrics, RoutingError } from './routing.js'
 import { formatPlaceLabel, validateQuoteRequest } from './validate.js'
+import { debitForApiCall } from './wallet.js'
 
 async function handleHealth(request, env) {
   const headers = corsHeaders(request, env)
@@ -14,7 +21,7 @@ async function handleHealth(request, env) {
     {
       status: 'ok',
       service: 'any3mi-api',
-      version: '2.0.0',
+      version: '4.0.0',
       routing: env.ORS_API_KEY ? 'openrouteservice' : 'unconfigured',
       database: hasDatabase(env) ? 'connected' : 'unconfigured',
     },
@@ -58,6 +65,13 @@ async function handleQuote(request, env) {
 
   const { origin, destination, vehicle } = validation.value
 
+  if (auth.account && hasDatabase(env)) {
+    const rateCheck = await checkRateLimit(env.DB, auth.account.id)
+    if (!rateCheck.ok) {
+      return rateLimitResponse(rateCheck.retryAfter, headers)
+    }
+  }
+
   let metrics
   try {
     metrics = await fetchRouteMetrics(env, origin, destination, vehicle)
@@ -97,8 +111,42 @@ async function handleQuote(request, env) {
   }
 
   const latencyMs = Date.now() - started
+  let billed = false
 
   if (auth.account && hasDatabase(env)) {
+    const monthlyUsed = await getMonthlyQuoteCount(env.DB, auth.account.id)
+    const charge = shouldChargeForQuote(monthlyUsed)
+
+    if (charge) {
+      const account = await env.DB.prepare(
+        'SELECT wallet_balance FROM accounts WHERE id = ?'
+      )
+        .bind(auth.account.id)
+        .first()
+
+      if ((account?.wallet_balance || 0) < COST_PER_CALL) {
+        return errorResponse(
+          'INSUFFICIENT_BALANCE',
+          'INSUFFICIENT_BALANCE',
+          `Free tier exhausted (${monthlyUsed} calls this month). Top up your wallet to continue.`,
+          402,
+          headers
+        )
+      }
+
+      const debit = await debitForApiCall(env.DB, auth.account.id, COST_PER_CALL)
+      if (!debit.ok) {
+        return errorResponse(
+          'INSUFFICIENT_BALANCE',
+          'INSUFFICIENT_BALANCE',
+          'Wallet balance too low. Top up under Billing to continue.',
+          402,
+          headers
+        )
+      }
+      billed = true
+    }
+
     await logQuote(env.DB, {
       accountId: auth.account.id,
       apiKeyId: auth.apiKeyId,
@@ -119,6 +167,9 @@ async function handleQuote(request, env) {
         origin: formatPlaceLabel(origin.lat, origin.lng),
         destination: formatPlaceLabel(destination.lat, destination.lng),
       },
+      billing: billed
+        ? { mode: 'payg', cost_ghs: COST_PER_CALL }
+        : { mode: 'free_tier', cost_ghs: 0 },
       ...quote,
     },
     200,
@@ -138,6 +189,8 @@ export default {
     try {
       const { handleRegister, handleLogin, handleRegenerateKey, handleMe, handleUsage, handleGetRates, handlePutRates } =
         await import('./handlers/account.js')
+      const { handleGetWallet, handleTopUp } = await import('./handlers/wallet.js')
+      const { handleGetPlan, handleRotateKey } = await import('./handlers/plan.js')
 
       if (request.method === 'GET' && url.pathname === '/v1/health') {
         return handleHealth(request, env)
@@ -169,6 +222,22 @@ export default {
 
       if (request.method === 'PUT' && url.pathname === '/v1/rates') {
         return handlePutRates(request, env)
+      }
+
+      if (request.method === 'GET' && url.pathname === '/v1/wallet') {
+        return handleGetWallet(request, env)
+      }
+
+      if (request.method === 'POST' && url.pathname === '/v1/wallet/topup') {
+        return handleTopUp(request, env)
+      }
+
+      if (request.method === 'GET' && url.pathname === '/v1/plan') {
+        return handleGetPlan(request, env)
+      }
+
+      if (request.method === 'POST' && url.pathname === '/v1/keys/rotate') {
+        return handleRotateKey(request, env)
       }
 
       if (request.method === 'POST' && url.pathname === '/v1/quote') {

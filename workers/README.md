@@ -59,7 +59,11 @@ npm run deploy
 | `GET` | `/v1/usage` | Bearer | 7-day usage stats |
 | `GET` | `/v1/rates` | Bearer | Pricing matrix |
 | `PUT` | `/v1/rates` | Bearer | Save pricing matrix |
-| `POST` | `/v1/quote` | Bearer | Quote (logged per account) |
+| `GET` | `/v1/wallet` | Bearer | Balance + recent transactions |
+| `POST` | `/v1/wallet/topup` | Bearer | MoMo top-up (sandbox) |
+| `GET` | `/v1/plan` | Bearer | Free tier + rate limit status |
+| `POST` | `/v1/keys/rotate` | Bearer | Rotate API key |
+| `POST` | `/v1/quote` | Bearer | Quote (free tier then GH₵ 0.10/call) |
 
 After deploy, open `/dashboard/login` on the frontend to register. Copy your API key, then set `VITE_ANY3MI_API_KEY` in Vercel so the public playground can authenticate.
 

@@ -11,10 +11,12 @@ const { theme, toggleTheme } = useTheme()
     :title="theme === 'game' ? 'Switch to SaaS theme' : 'Switch to Game theme'"
     @click="toggleTheme"
   >
-    <span class="text-base leading-none transition-transform duration-300 group-hover:scale-110">
-      {{ theme === 'game' ? '🎮' : '✨' }}
+    <span
+      class="flex h-5 w-5 items-center justify-center rounded bg-surface-muted text-[9px] font-bold uppercase text-accent transition-transform duration-300 group-hover:scale-110"
+    >
+      {{ theme === 'game' ? 'Gm' : 'Sa' }}
     </span>
-    <span class="hidden text-text-muted group-hover:text-text sm:inline">
+    <span class="text-text-muted group-hover:text-text">
       {{ theme === 'game' ? 'Game' : 'SaaS' }}
     </span>
   </button>

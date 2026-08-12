@@ -12,9 +12,9 @@ const { calculateQuote } = usePricing()
 const { el: sectionEl, isVisible } = useScrollReveal()
 
 const vehicles = [
-  { id: 'bicycle', label: 'Bike', icon: '🚲', desc: 'GH₵ 5 base' },
-  { id: 'motorbike', label: 'Motor', icon: '🏍️', desc: 'GH₵ 8 base' },
-  { id: 'car', label: 'Car', icon: '🚗', desc: 'GH₵ 15 base' },
+  { id: 'bicycle', label: 'Bike', abbr: 'Bi', desc: 'GH₵ 5 base' },
+  { id: 'motorbike', label: 'Motor', abbr: 'Mo', desc: 'GH₵ 8 base' },
+  { id: 'car', label: 'Car', abbr: 'Ca', desc: 'GH₵ 15 base' },
 ]
 
 const activeVehicle = ref('motorbike')
@@ -89,8 +89,12 @@ async function testEndpoint() {
   } catch (err) {
     clearInterval(progressInterval)
     loading.value = false
-    errorMessage.value =
-      err instanceof Error ? err.message : 'Quote request failed'
+    if (err instanceof Error && 'code' in err && err.code === 'INSUFFICIENT_BALANCE') {
+      errorMessage.value = `${err.message} Top up in the dashboard under Billing.`
+    } else {
+      errorMessage.value =
+        err instanceof Error ? err.message : 'Quote request failed'
+    }
   }
 }
 
@@ -188,7 +192,7 @@ async function copyResponse() {
                 "
                 @click="switchVehicle(v.id)"
               >
-                <span class="text-xl">{{ v.icon }}</span>
+                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-muted text-[10px] font-bold uppercase text-accent">{{ v.abbr }}</span>
                 <span class="text-xs font-semibold" :class="activeVehicle === v.id ? 'text-accent' : 'text-text'">{{ v.label }}</span>
                 <span class="text-[9px] text-text-subtle">{{ v.desc }}</span>
                 <span

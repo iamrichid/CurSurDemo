@@ -6,6 +6,8 @@ import {
   hashPassword,
   maskApiKey,
 } from './crypto.js'
+import { addWelcomeCredit, getSpendLast7Days } from './wallet.js'
+import { getPlanStatus } from './plans.js'
 
 const COST_PER_CALL = 0.1
 const DAY_MS = 86_400_000
@@ -69,11 +71,14 @@ export async function createAccountWithKey(db, { orgName, email, password }) {
       .bind(accountId, JSON.stringify(defaultRates), now),
   ])
 
+  await addWelcomeCredit(db, accountId)
+
   return {
     account: {
       id: accountId,
       org_name: orgName.trim(),
       email: email.toLowerCase().trim(),
+      wallet_balance: 10,
     },
     api_key: apiKey,
     key_prefix: maskApiKey(apiKey),
@@ -239,6 +244,7 @@ export async function getUsage(db, accountId) {
 
   const totalCalls = totals?.total_calls || 0
   const avgLatency = Math.round(totals?.avg_latency_ms || 0)
+  const totalSpend = await getSpendLast7Days(db, accountId, since)
 
   const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const chartMap = Object.fromEntries(
@@ -264,13 +270,16 @@ export async function getUsage(db, accountId) {
     pct: vehicleTotal ? Math.round((row.count / vehicleTotal) * 100) : 0,
   }))
 
+  const plan = await getPlanStatus(db, accountId)
+
   return {
     total_calls: totalCalls,
-    total_spend: Math.round(totalCalls * COST_PER_CALL * 100) / 100,
+    total_spend: totalSpend,
     avg_latency_ms: avgLatency,
     success_rate: totalCalls > 0 ? 100 : 100,
     chart,
     vehicle_breakdown: vehicleBreakdown,
     cost_per_call: COST_PER_CALL,
+    plan,
   }
 }

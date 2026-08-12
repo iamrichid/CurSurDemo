@@ -16,7 +16,6 @@ const tiers = [
     priceLabel: 'GH₵ 0',
     period: 'forever',
     desc: 'Perfect for prototyping and early-stage apps.',
-    icon: '🚀',
     features: [
       { text: '500 API calls / month', included: true },
       { text: 'All vehicle types', included: true },
@@ -35,7 +34,6 @@ const tiers = [
     priceLabel: 'GH₵ 0.10',
     period: 'per API call',
     desc: 'Scale seamlessly as your delivery volume grows.',
-    icon: '⚡',
     features: [
       { text: 'Unlimited API calls', included: true },
       { text: 'Nationwide coverage', included: true },
@@ -171,7 +169,12 @@ function formatCalls(n) {
 
           <div class="mb-4 flex items-start justify-between">
             <div>
-              <span class="text-2xl">{{ tier.icon }}</span>
+              <span
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold uppercase"
+                :class="tier.highlighted ? 'bg-accent text-accent-foreground' : 'bg-surface-muted text-accent'"
+              >
+                {{ tier.id === 'free' ? 'Free' : 'PAYG' }}
+              </span>
               <h3 class="mt-2 text-lg font-semibold text-text">{{ tier.name }}</h3>
             </div>
             <span
