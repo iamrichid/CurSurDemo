@@ -36,6 +36,7 @@ function closeMenu() {
         <RouterLink to="/docs" class="text-sm text-text-muted transition-colors hover:text-text">Docs</RouterLink>
         <a href="/#playground" class="text-sm text-text-muted transition-colors hover:text-text">Playground</a>
         <a href="/#pricing" class="text-sm text-text-muted transition-colors hover:text-text">Pricing</a>
+        <a href="/#scan" class="text-sm text-text-muted transition-colors hover:text-text">Scan QR</a>
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
@@ -99,6 +100,13 @@ function closeMenu() {
             @click="closeMenu"
           >
             Pricing
+          </a>
+          <a
+            href="/#scan"
+            class="rounded-lg px-3 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
+            @click="closeMenu"
+          >
+            Scan QR
           </a>
           <RouterLink
             to="/dashboard/overview"

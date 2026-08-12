@@ -6,6 +6,7 @@ import SponsorsCarousel from '../components/landing/SponsorsCarousel.vue'
 import HowItWorks from '../components/landing/HowItWorks.vue'
 import ApiPlayground from '../components/landing/ApiPlayground.vue'
 import PricingSection from '../components/landing/PricingSection.vue'
+import QrScanSection from '../components/landing/QrScanSection.vue'
 import { brand } from '../data/brand.js'
 import { isLiveApiEnabled } from '../services/quoteApi.js'
 
@@ -23,6 +24,7 @@ const apiHealthUrl = isLiveApiEnabled()
       <HowItWorks />
       <ApiPlayground />
       <PricingSection />
+      <QrScanSection />
     </main>
     <footer class="border-t border-border py-8">
       <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6">

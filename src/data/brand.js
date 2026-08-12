@@ -2,6 +2,7 @@ export const brand = {
   name: 'ANY3MI',
   org: 'Usammi',
   dept: 'TECH DEPT',
+  siteUrl: 'https://cur-sur-demo.vercel.app',
   nightMarket: {
     name: 'Night Market',
     url: 'https://nightmarketgh.com',
