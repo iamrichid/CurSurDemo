@@ -7,6 +7,7 @@ import {
   curlExample,
   jsonResponse,
   requestParams,
+  locationExamples,
   vehicles,
   errors,
   highlightJson,
@@ -125,11 +126,11 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
           <section id="authentication" class="scroll-mt-24">
             <h2 class="text-xl font-bold text-text">Authentication</h2>
             <p class="mt-3 text-sm leading-relaxed text-text-muted">
-              All requests require a Bearer token. Generate keys from your
+              Register for an API key from the
               <RouterLink to="/dashboard/login?intent=key" class="text-accent hover:underline">developer dashboard</RouterLink>.
-              Use <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-accent">a3_test_</code> keys in sandbox and <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-accent">a3_live_</code> in production.
+              Use <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-accent">Authorization: Bearer a3_live_…</code> on every request.
             </p>
-            <pre class="mt-4 overflow-x-auto rounded-xl border border-border bg-[#0a0a0c] p-4 font-mono text-xs text-text-muted">Authorization: Bearer a3_live_sk_abc123</pre>
+            <pre class="mt-4 overflow-x-auto rounded-xl border border-border code-panel p-4 font-mono text-xs text-text-muted">Authorization: Bearer a3_live_sk_abc123</pre>
           </section>
 
           <section id="quickstart" class="scroll-mt-24">
@@ -146,8 +147,8 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
               <li class="flex gap-3 ft-card p-4">
                 <span class="font-mono text-xs font-bold text-accent">02</span>
                 <div>
-                  <p class="text-sm font-semibold text-text">POST coordinates to /v1/quote</p>
-                  <p class="text-xs text-text-muted">Origin + destination lat/lng and vehicle type.</p>
+                  <p class="text-sm font-semibold text-text">POST pickup &amp; drop-off to /v1/quote</p>
+                  <p class="text-xs text-text-muted">Addresses or lat/lng — we geocode and route server-side.</p>
                 </div>
               </li>
               <li class="flex gap-3 ft-card p-4">
@@ -191,21 +192,35 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
             <div class="mt-6 grid gap-4 lg:grid-cols-2">
               <div class="overflow-hidden rounded-xl border border-border">
                 <div class="border-b border-border bg-surface-elevated px-4 py-2 font-mono text-[10px] text-text-subtle">request.sh</div>
-                <pre class="overflow-x-auto bg-[#0a0a0c] p-4 font-mono text-[11px] leading-relaxed text-text-muted">{{ curlExample }}</pre>
+                <pre class="code-panel overflow-x-auto p-4 font-mono text-[11px] leading-relaxed text-text-muted">{{ curlExample }}</pre>
               </div>
               <div class="overflow-hidden rounded-xl border border-border">
                 <div class="flex items-center justify-between border-b border-border bg-surface-elevated px-4 py-2">
                   <span class="font-mono text-[10px] text-text-subtle">response.json</span>
                   <span class="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">200 OK</span>
                 </div>
-                <pre class="overflow-x-auto bg-[#0a0a0c] p-4 font-mono text-[11px] leading-relaxed" v-html="highlightJson(jsonResponse)" />
+                <pre class="code-panel overflow-x-auto p-4 font-mono text-[11px] leading-relaxed" v-html="highlightJson(jsonResponse)" />
+              </div>
+            </div>
+          </section>
+
+          <section id="locations" class="scroll-mt-24">
+            <h2 class="text-xl font-bold text-text">Pickup &amp; Drop-off</h2>
+            <p class="mt-3 text-sm text-text-muted">
+              Pass human-readable Ghana addresses — ANY3MI geocodes them via OpenStreetMap, validates they fall inside Ghana, then routes and prices the trip. Coordinates still work if your app already has GPS from a map SDK.
+            </p>
+            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+              <div v-for="example in locationExamples" :key="example.title" class="ft-card p-4">
+                <p class="text-sm font-semibold text-text">{{ example.title }}</p>
+                <pre class="mt-2 overflow-x-auto rounded-lg code-panel p-3 font-mono text-[10px] text-text-muted">{{ example.body }}</pre>
+                <p class="mt-2 text-xs text-text-subtle">{{ example.note }}</p>
               </div>
             </div>
           </section>
 
           <section id="response" class="scroll-mt-24">
             <h2 class="text-xl font-bold text-text">Response Format</h2>
-            <p class="mt-3 text-sm text-text-muted">All successful quotes return <code class="font-mono text-accent">currency: "GHS"</code> with pricing in <code class="font-mono text-accent">price_ghs</code>.</p>
+            <p class="mt-3 text-sm text-text-muted">All successful quotes return <code class="font-mono text-accent">currency: "GHS"</code> with pricing in <code class="font-mono text-accent">price_ghs</code>. The <code class="font-mono text-accent">route</code> object includes resolved <code class="font-mono text-accent">label</code>, <code class="font-mono text-accent">lat</code>, <code class="font-mono text-accent">lng</code>, and optional <code class="font-mono text-accent">address</code> for each stop.</p>
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
               <div v-for="field in [
                 { key: 'distance_km', desc: 'Road distance in kilometres (OSM routing).' },

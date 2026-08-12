@@ -63,7 +63,10 @@ export async function fetchQuote({ origin, destination, vehicle }) {
   await new Promise((resolve) => setTimeout(resolve, 200))
 
   const route = getMockRoute()
-  const payload = buildQuoteResponse(defaultRates, vehicle, route)
+  const payload = buildQuoteResponse(defaultRates, vehicle, route, {
+    originInput: origin,
+    destinationInput: destination,
+  })
   if (!payload) {
     throw new QuoteApiError(422, 'Unsupported vehicle type')
   }

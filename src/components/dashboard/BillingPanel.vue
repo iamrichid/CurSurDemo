@@ -171,7 +171,7 @@ onMounted(loadWallet)
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-text">Mobile Money Top-Up</h2>
           <span class="rounded-md border border-border bg-surface-muted px-2 py-0.5 text-[10px] text-text-subtle">
-            Sandbox MoMo
+            Mobile Money
           </span>
         </div>
 

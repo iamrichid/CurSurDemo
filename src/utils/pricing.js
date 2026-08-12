@@ -24,14 +24,48 @@ export function calculateQuote(rates, vehicle, distanceKm, durationMins) {
 
 export function getMockRoute() {
   return {
-    origin: { name: 'East Legon', lat: 5.638, lng: -0.154 },
-    destination: { name: 'Circle, Accra', lat: 5.571, lng: -0.214 },
+    origin: {
+      name: 'East Legon, Accra',
+      address: 'East Legon, Accra',
+      lat: 5.638,
+      lng: -0.154,
+    },
+    destination: {
+      name: 'Circle, Accra',
+      address: 'Circle, Accra',
+      lat: 5.571,
+      lng: -0.214,
+    },
     distanceKm: 8.4,
     durationMins: 24,
   }
 }
 
-export function buildQuoteResponse(rates, vehicle, route) {
+function routePointFromInput(input, fallback) {
+  if (typeof input === 'string' && input.trim()) {
+    return { ...fallback, address: input.trim(), name: input.trim() }
+  }
+  if (input?.address) {
+    return {
+      ...fallback,
+      address: input.address,
+      name: input.label || input.address,
+      lat: input.lat ?? fallback.lat,
+      lng: input.lng ?? fallback.lng,
+    }
+  }
+  if (typeof input?.lat === 'number' && typeof input?.lng === 'number') {
+    return {
+      ...fallback,
+      lat: input.lat,
+      lng: input.lng,
+      name: input.label || fallback.name,
+    }
+  }
+  return fallback
+}
+
+export function buildQuoteResponse(rates, vehicle, route, { originInput, destinationInput } = {}) {
   const quote = calculateQuote(
     rates,
     vehicle,
@@ -40,11 +74,24 @@ export function buildQuoteResponse(rates, vehicle, route) {
   )
   if (!quote) return null
 
+  const origin = routePointFromInput(originInput, route.origin)
+  const destination = routePointFromInput(destinationInput, route.destination)
+
   return {
     status: 'success',
     route: {
-      origin: route.origin.name,
-      destination: route.destination.name,
+      origin: {
+        label: origin.name,
+        lat: origin.lat,
+        lng: origin.lng,
+        ...(origin.address ? { address: origin.address } : {}),
+      },
+      destination: {
+        label: destination.name,
+        lat: destination.lat,
+        lng: destination.lng,
+        ...(destination.address ? { address: destination.address } : {}),
+      },
     },
     ...quote,
   }

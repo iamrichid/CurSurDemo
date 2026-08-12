@@ -9,6 +9,7 @@ export const docsNav = [
   { id: 'authentication', label: 'Authentication' },
   { id: 'quickstart', label: 'Quick Start' },
   { id: 'quote', label: 'Quote API' },
+  { id: 'locations', label: 'Pickup & Drop-off' },
   { id: 'response', label: 'Response Format' },
   { id: 'vehicles', label: 'Vehicle Types' },
   { id: 'errors', label: 'Error Codes' },
@@ -19,16 +20,26 @@ export const curlExample = `curl -X POST https://api.any3mi.com/v1/quote \\
   -H "Authorization: Bearer a3_live_sk_abc123" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "origin": { "lat": 5.638, "lng": -0.154 },
-    "destination": { "lat": 5.571, "lng": -0.214 },
+    "origin": { "address": "East Legon, Accra" },
+    "destination": { "address": "Kwame Nkrumah Circle, Accra" },
     "vehicle": "motorbike"
   }'`
 
 export const jsonResponse = `{
   "status": "success",
   "route": {
-    "origin": "East Legon",
-    "destination": "Circle, Accra"
+    "origin": {
+      "label": "East Legon, Accra, Ghana",
+      "address": "East Legon, Accra",
+      "lat": 5.638,
+      "lng": -0.154
+    },
+    "destination": {
+      "label": "Kwame Nkrumah Circle, Accra, Ghana",
+      "address": "Kwame Nkrumah Circle, Accra",
+      "lat": 5.571,
+      "lng": -0.214
+    }
   },
   "vehicle": "Motorbike (Okada)",
   "distance_km": 8.4,
@@ -38,11 +49,37 @@ export const jsonResponse = `{
 }`
 
 export const requestParams = [
-  { name: 'origin.lat', type: 'float', required: true, desc: 'Origin latitude (WGS84). Accra range: ~5.55–5.65' },
-  { name: 'origin.lng', type: 'float', required: true, desc: 'Origin longitude (WGS84). Accra range: ~-0.30–-0.10' },
-  { name: 'destination.lat', type: 'float', required: true, desc: 'Destination latitude' },
-  { name: 'destination.lng', type: 'float', required: true, desc: 'Destination longitude' },
+  {
+    name: 'origin',
+    type: 'object | string',
+    required: true,
+    desc: 'Pickup: { address: "East Legon, Accra" } or { lat, lng } or a plain address string',
+  },
+  {
+    name: 'destination',
+    type: 'object | string',
+    required: true,
+    desc: 'Drop-off: same formats as origin. Addresses are geocoded to Ghana coordinates server-side.',
+  },
   { name: 'vehicle', type: 'string', required: true, desc: 'One of: bicycle, motorbike, car' },
+]
+
+export const locationExamples = [
+  {
+    title: 'Address (recommended)',
+    body: '{ "address": "Osu Oxford Street, Accra" }',
+    note: 'ANY3MI geocodes and validates the point is in Ghana.',
+  },
+  {
+    title: 'Plain string',
+    body: '"Madina, Accra"',
+    note: 'Shorthand — pass the address directly as origin or destination.',
+  },
+  {
+    title: 'Coordinates',
+    body: '{ "lat": 5.638, "lng": -0.154 }',
+    note: 'Skip geocoding when you already have GPS from your map SDK.',
+  },
 ]
 
 export const vehicles = [
@@ -53,7 +90,9 @@ export const vehicles = [
 
 export const errors = [
   { code: 402, name: 'INSUFFICIENT_BALANCE', desc: 'Wallet balance too low for another API call.' },
+  { code: 400, name: 'INVALID_LOCATION', desc: 'Missing or malformed origin/destination.' },
   { code: 400, name: 'INVALID_COORDINATES', desc: 'Lat/lng out of supported Ghana bounds.' },
+  { code: 422, name: 'GEOCODING_FAILED', desc: 'Address could not be resolved in Ghana.' },
   { code: 401, name: 'UNAUTHORIZED', desc: 'Missing or invalid API key.' },
   { code: 422, name: 'UNSUPPORTED_VEHICLE', desc: 'Vehicle type not recognized.' },
   { code: 429, name: 'RATE_LIMITED', desc: 'Exceeded plan rate limit. Retry after header delay.' },

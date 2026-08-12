@@ -32,28 +32,32 @@ const copied = ref(false)
 const errorMessage = ref('')
 
 const route = getMockRoute()
+const pickupAddress = ref(route.origin.address)
+const dropoffAddress = ref(route.destination.address)
+const lastQuote = ref(null)
 const liveApi = isLiveApiEnabled()
 const hasApiKey = computed(() => Boolean(getApiKey()))
 
 const statusBadge = computed(() => {
   if (!liveApi) {
-    return { label: 'Local mock · No auth', class: 'border-success/30 bg-success/10 text-success' }
+    return { label: 'Local preview · No auth', class: 'border-success/30 bg-success/10 text-success' }
   }
   if (hasApiKey.value) {
-    return { label: 'Live API · Key loaded', class: 'border-accent/30 bg-accent/10 text-accent' }
+    return { label: 'Production API · Key loaded', class: 'border-accent/30 bg-accent/10 text-accent' }
   }
-  return { label: 'Live API · Key required', class: 'border-warning/30 bg-warning/10 text-warning' }
+  return { label: 'Production API · Key required', class: 'border-warning/30 bg-warning/10 text-warning' }
 })
 
-const quote = computed(() =>
-  calculateQuote(activeVehicle.value, route.distanceKm, route.durationMins)
-)
+const previewQuote = computed(() => {
+  if (lastQuote.value) return lastQuote.value
+  return calculateQuote(activeVehicle.value, route.distanceKm, route.durationMins)
+})
 
 const requestJson = computed(() =>
   JSON.stringify(
     {
-      origin: { lat: route.origin.lat, lng: route.origin.lng },
-      destination: { lat: route.destination.lat, lng: route.destination.lng },
+      origin: { address: pickupAddress.value.trim() },
+      destination: { address: dropoffAddress.value.trim() },
       vehicle: activeVehicle.value,
     },
     null,
@@ -81,8 +85,8 @@ async function testEndpoint() {
   try {
     const [payload] = await Promise.all([
       fetchQuote({
-        origin: { lat: route.origin.lat, lng: route.origin.lng },
-        destination: { lat: route.destination.lat, lng: route.destination.lng },
+        origin: { address: pickupAddress.value.trim() },
+        destination: { address: dropoffAddress.value.trim() },
         vehicle: activeVehicle.value,
       }),
       new Promise((resolve) => setTimeout(resolve, liveApi ? 0 : 1200)),
@@ -94,6 +98,7 @@ async function testEndpoint() {
 
     loading.value = false
     showResponse.value = true
+    lastQuote.value = payload
 
     const text = JSON.stringify(payload, null, 2)
     isTypingResponse.value = true
@@ -131,6 +136,7 @@ function switchVehicle(id) {
   responseText.value = ''
   routeProgress.value = 0
   errorMessage.value = ''
+  lastQuote.value = null
 }
 
 async function copyResponse() {
@@ -159,11 +165,11 @@ async function copyResponse() {
               <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
               <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
             </span>
-            Interactive Demo
+            Live Playground
           </div>
-          <h2 class="text-3xl font-bold tracking-tight text-text sm:text-4xl">Live API Playground</h2>
+          <h2 class="text-3xl font-bold tracking-tight text-text sm:text-4xl">Quote by address</h2>
           <p class="mt-3 max-w-xl text-text-muted">
-            Fire a real quote request — East Legon to Circle, Accra. Swap vehicles and watch pricing update instantly.
+            Send pickup and drop-off addresses — ANY3MI geocodes, routes, and prices the trip in Ghana Cedis.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -203,7 +209,7 @@ async function copyResponse() {
           <div class="flex items-center gap-3 text-[10px] text-text-subtle sm:text-xs">
             <span v-if="showResponse" class="font-mono text-success">{{ responseMs }}ms</span>
             <span class="hidden sm:inline">·</span>
-            <span>{{ route.origin.name }} → {{ route.destination.name }}</span>
+            <span>{{ pickupAddress }} → {{ dropoffAddress }}</span>
           </div>
         </div>
 
@@ -217,7 +223,31 @@ async function copyResponse() {
               <span class="ml-1 font-mono text-[10px] text-text-subtle">request.json</span>
             </div>
 
-            <p class="mb-3 mt-4 text-xs font-medium text-text-muted">Vehicle type</p>
+            <p class="mb-3 mt-4 text-xs font-medium text-text-muted">Pickup &amp; drop-off</p>
+            <div class="mb-5 space-y-3">
+              <div>
+                <label class="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Pickup</label>
+                <input
+                  v-model="pickupAddress"
+                  type="text"
+                  placeholder="East Legon, Accra"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  @input="showResponse = false; lastQuote = null"
+                />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Drop-off</label>
+                <input
+                  v-model="dropoffAddress"
+                  type="text"
+                  placeholder="Kwame Nkrumah Circle, Accra"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  @input="showResponse = false; lastQuote = null"
+                />
+              </div>
+            </div>
+
+            <p class="mb-3 text-xs font-medium text-text-muted">Vehicle type</p>
             <div class="mb-5 grid grid-cols-3 gap-2">
               <button
                 v-for="v in vehicles"
@@ -245,15 +275,15 @@ async function copyResponse() {
             </div>
 
             <div class="mb-4 flex flex-wrap items-center gap-2">
-              <span class="rounded-md border border-border bg-surface-card px-2 py-1 text-[10px] font-medium text-text">{{ route.origin.name }}</span>
+              <span class="rounded-md border border-border bg-surface-card px-2 py-1 text-[10px] font-medium text-text">{{ pickupAddress }}</span>
               <svg class="h-3 w-3 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-              <span class="rounded-md border border-border bg-surface-card px-2 py-1 text-[10px] font-medium text-text">{{ route.destination.name }}</span>
-              <span class="ml-auto font-mono text-[10px] text-text-subtle">{{ route.distanceKm }} km · ~{{ route.durationMins }} min</span>
+              <span class="rounded-md border border-border bg-surface-card px-2 py-1 text-[10px] font-medium text-text">{{ dropoffAddress }}</span>
+              <span v-if="lastQuote" class="ml-auto font-mono text-[10px] text-text-subtle">{{ lastQuote.distance_km }} km · ~{{ lastQuote.duration_mins }} min</span>
             </div>
 
-            <pre class="mb-5 overflow-x-auto rounded-xl border border-border bg-[#0a0a0c] p-4 font-mono text-[11px] leading-relaxed text-text-muted sm:text-xs"><code>{{ requestJson }}</code></pre>
+            <pre class="mb-5 overflow-x-auto rounded-xl border border-border code-panel p-4 font-mono text-[11px] leading-relaxed text-text-muted sm:text-xs"><code>{{ requestJson }}</code></pre>
 
             <p v-if="errorMessage" class="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
               {{ errorMessage }}
@@ -289,14 +319,14 @@ async function copyResponse() {
               :progress="routeProgress"
             />
             <Transition name="tab-content">
-              <p v-if="showResponse && quote" class="mt-4 text-center font-mono text-lg font-bold text-accent">
-                GH₵ {{ quote.price_ghs.toFixed(2) }}
+              <p v-if="showResponse && previewQuote" class="mt-4 text-center font-mono text-lg font-bold text-accent">
+                GH₵ {{ previewQuote.price_ghs.toFixed(2) }}
               </p>
             </Transition>
           </div>
 
           <!-- Response -->
-          <div class="relative flex min-h-[360px] flex-col bg-[#0a0a0c] lg:col-span-5">
+          <div class="relative flex min-h-[360px] flex-col code-panel lg:col-span-5">
             <div class="flex items-center justify-between border-b border-border/50 px-5 py-3">
               <div class="flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-danger/80" />
@@ -343,7 +373,7 @@ async function copyResponse() {
                 <ThreeLoader :active="loading" />
                 <div class="w-full max-w-xs space-y-2">
                   <div class="flex justify-between font-mono text-[10px] text-text-subtle">
-                    <span>Geocoding coordinates</span>
+                    <span>Geocoding addresses</span>
                     <span>{{ Math.round(routeProgress * 40) }}%</span>
                   </div>
                   <div class="h-1 overflow-hidden rounded-full bg-surface-muted">
@@ -361,20 +391,20 @@ async function copyResponse() {
               <Transition name="fade-slide-up">
                 <div v-if="showResponse && !loading" class="flex flex-1 flex-col gap-4">
                   <div
-                    v-if="quote"
+                    v-if="previewQuote"
                     v-motion
                     :initial="{ opacity: 0, scale: 0.95 }"
                     :enter="{ opacity: 1, scale: 1, transition: { duration: 400 } }"
                     class="rounded-xl border border-accent/30 bg-accent-muted/30 p-4"
                   >
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Quoted price</p>
-                    <p class="mt-1 text-3xl font-extrabold text-accent">GH₵ {{ quote.price_ghs.toFixed(2) }}</p>
+                    <p class="mt-1 text-3xl font-extrabold text-accent">GH₵ {{ previewQuote.price_ghs.toFixed(2) }}</p>
                     <div class="mt-2 flex flex-wrap gap-3 font-mono text-[10px] text-text-muted">
-                      <span>{{ quote.distance_km }} km</span>
+                      <span>{{ previewQuote.distance_km }} km</span>
                       <span>·</span>
-                      <span>{{ quote.duration_mins }} min</span>
+                      <span>{{ previewQuote.duration_mins }} min</span>
                       <span>·</span>
-                      <span>{{ quote.vehicle }}</span>
+                      <span>{{ previewQuote.vehicle }}</span>
                     </div>
                   </div>
                   <pre

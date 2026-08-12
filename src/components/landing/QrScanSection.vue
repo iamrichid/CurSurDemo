@@ -2,10 +2,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import QRCode from 'qrcode'
 import { useScrollReveal } from '../../composables/useScrollReveal'
+import { useTheme } from '../../composables/useTheme.js'
 import { useToast } from '../../composables/useToast.js'
 import { brand } from '../../data/brand.js'
 
 const { el: sectionEl, isVisible } = useScrollReveal()
+const { theme } = useTheme()
 const toast = useToast()
 const canvasRef = ref(null)
 const qrReady = ref(false)
@@ -22,14 +24,14 @@ async function renderQr() {
   qrReady.value = false
   if (!canvasRef.value) return
   try {
+    const style = getComputedStyle(document.documentElement)
+    const dark = style.getPropertyValue('--color-text').trim() || '#18181b'
+    const light = style.getPropertyValue('--color-surface-elevated').trim() || '#ffffff'
     await QRCode.toCanvas(canvasRef.value, siteUrl.value, {
       width: 200,
       margin: 1,
       errorCorrectionLevel: 'M',
-      color: {
-        dark: '#0a0a0c',
-        light: '#fafafa',
-      },
+      color: { dark, light },
     })
     qrReady.value = true
   } catch {
@@ -48,6 +50,7 @@ async function copyLink() {
 
 onMounted(renderQr)
 watch(siteUrl, renderQr)
+watch(theme, renderQr)
 </script>
 
 <template>
@@ -75,7 +78,7 @@ watch(siteUrl, renderQr)
           class="ft-card-glow mx-auto flex max-w-3xl flex-col items-center gap-8 p-6 sm:flex-row sm:gap-10 sm:p-8"
         >
           <div
-            class="relative flex shrink-0 items-center justify-center rounded-2xl border border-border bg-[#fafafa] p-4 shadow-lg shadow-black/20"
+            class="relative flex shrink-0 items-center justify-center rounded-2xl border border-border bg-surface-elevated p-4 shadow-lg shadow-black/10"
             :class="{ 'animate-pulse': !qrReady }"
           >
             <canvas

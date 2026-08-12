@@ -14,20 +14,6 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// wrangler-modules-watch:wrangler:modules-watch
-var init_wrangler_modules_watch = __esm({
-  "wrangler-modules-watch:wrangler:modules-watch"() {
-    init_modules_watch_stub();
-  }
-});
-
-// node_modules/wrangler/templates/modules-watch-stub.js
-var init_modules_watch_stub = __esm({
-  "node_modules/wrangler/templates/modules-watch-stub.js"() {
-    init_wrangler_modules_watch();
-  }
-});
-
 // ../src/utils/pricing.js
 var pricing_exports = {};
 __export(pricing_exports, {
@@ -51,13 +37,46 @@ function calculateQuote(rates, vehicle, distanceKm, durationMins) {
 }
 function getMockRoute() {
   return {
-    origin: { name: "East Legon", lat: 5.638, lng: -0.154 },
-    destination: { name: "Circle, Accra", lat: 5.571, lng: -0.214 },
+    origin: {
+      name: "East Legon, Accra",
+      address: "East Legon, Accra",
+      lat: 5.638,
+      lng: -0.154
+    },
+    destination: {
+      name: "Circle, Accra",
+      address: "Circle, Accra",
+      lat: 5.571,
+      lng: -0.214
+    },
     distanceKm: 8.4,
     durationMins: 24
   };
 }
-function buildQuoteResponse(rates, vehicle, route) {
+function routePointFromInput(input, fallback) {
+  if (typeof input === "string" && input.trim()) {
+    return { ...fallback, address: input.trim(), name: input.trim() };
+  }
+  if (input?.address) {
+    return {
+      ...fallback,
+      address: input.address,
+      name: input.label || input.address,
+      lat: input.lat ?? fallback.lat,
+      lng: input.lng ?? fallback.lng
+    };
+  }
+  if (typeof input?.lat === "number" && typeof input?.lng === "number") {
+    return {
+      ...fallback,
+      lat: input.lat,
+      lng: input.lng,
+      name: input.label || fallback.name
+    };
+  }
+  return fallback;
+}
+function buildQuoteResponse(rates, vehicle, route, { originInput, destinationInput } = {}) {
   const quote = calculateQuote(
     rates,
     vehicle,
@@ -65,11 +84,23 @@ function buildQuoteResponse(rates, vehicle, route) {
     route.durationMins
   );
   if (!quote) return null;
+  const origin = routePointFromInput(originInput, route.origin);
+  const destination = routePointFromInput(destinationInput, route.destination);
   return {
     status: "success",
     route: {
-      origin: route.origin.name,
-      destination: route.destination.name
+      origin: {
+        label: origin.name,
+        lat: origin.lat,
+        lng: origin.lng,
+        ...origin.address ? { address: origin.address } : {}
+      },
+      destination: {
+        label: destination.name,
+        lat: destination.lat,
+        lng: destination.lng,
+        ...destination.address ? { address: destination.address } : {}
+      }
     },
     ...quote
   };
@@ -77,7 +108,6 @@ function buildQuoteResponse(rates, vehicle, route) {
 var defaultRates, vehicleTypes;
 var init_pricing = __esm({
   "../src/utils/pricing.js"() {
-    init_modules_watch_stub();
     defaultRates = {
       bicycle: { baseFare: 5, perKm: 1.2, perMinute: 0.15, label: "Bicycle" },
       motorbike: { baseFare: 8, perKm: 1.8, perMinute: 0.25, label: "Motorbike (Okada)" },
@@ -86,6 +116,7 @@ var init_pricing = __esm({
     vehicleTypes = ["bicycle", "motorbike", "car"];
     __name(calculateQuote, "calculateQuote");
     __name(getMockRoute, "getMockRoute");
+    __name(routePointFromInput, "routePointFromInput");
     __name(buildQuoteResponse, "buildQuoteResponse");
   }
 });
@@ -136,7 +167,6 @@ function maskApiKey(apiKey) {
 var PBKDF2_ITERATIONS;
 var init_crypto = __esm({
   "src/crypto.js"() {
-    init_modules_watch_stub();
     PBKDF2_ITERATIONS = 1e5;
     __name(toHex, "toHex");
     __name(generateId, "generateId");
@@ -323,7 +353,6 @@ async function getSpendLast7Days(db, accountId, since) {
 var WELCOME_CREDIT, MIN_TOPUP, MAX_TOPUP, VALID_PROVIDERS;
 var init_wallet = __esm({
   "src/wallet.js"() {
-    init_modules_watch_stub();
     init_crypto();
     WELCOME_CREDIT = 10;
     MIN_TOPUP = 1;
@@ -388,7 +417,6 @@ async function getPlanStatus(db, accountId) {
 var FREE_TIER_MONTHLY, RATE_LIMIT_PER_MINUTE, COST_PER_CALL;
 var init_plans = __esm({
   "src/plans.js"() {
-    init_modules_watch_stub();
     FREE_TIER_MONTHLY = 500;
     RATE_LIMIT_PER_MINUTE = 40;
     COST_PER_CALL = 0.1;
@@ -603,7 +631,6 @@ async function getUsage(db, accountId) {
 var COST_PER_CALL2, DAY_MS;
 var init_db = __esm({
   "src/db.js"() {
-    init_modules_watch_stub();
     init_pricing();
     init_crypto();
     init_wallet();
@@ -678,7 +705,6 @@ async function authenticateRequest(request, env) {
 }
 var init_auth = __esm({
   "src/auth.js"() {
-    init_modules_watch_stub();
     init_crypto();
     init_db();
     __name(extractBearerToken, "extractBearerToken");
@@ -852,7 +878,6 @@ async function sendWalletTopUpEmail(env, { email, orgName, amountGhs, balanceGhs
 var RESEND_API, USER_AGENT;
 var init_email = __esm({
   "src/email.js"() {
-    init_modules_watch_stub();
     RESEND_API = "https://api.resend.com/emails";
     USER_AGENT = "any3mi-api/4.1.0";
     __name(isEmailConfigured, "isEmailConfigured");
@@ -912,7 +937,6 @@ function rateLimitResponse(retryAfter, extraHeaders = {}) {
 }
 var init_http = __esm({
   "src/http.js"() {
-    init_modules_watch_stub();
     __name(corsHeaders, "corsHeaders");
     __name(json, "json");
     __name(errorResponse, "errorResponse");
@@ -1168,7 +1192,6 @@ async function handlePutRates(request, env) {
 }
 var init_account = __esm({
   "src/handlers/account.js"() {
-    init_modules_watch_stub();
     init_db();
     init_auth();
     init_email();
@@ -1301,7 +1324,6 @@ async function handleTopUp(request, env) {
 }
 var init_wallet2 = __esm({
   "src/handlers/wallet.js"() {
-    init_modules_watch_stub();
     init_auth();
     init_db();
     init_email();
@@ -1404,7 +1426,6 @@ async function handleRotateKey(request, env) {
 }
 var init_plan = __esm({
   "src/handlers/plan.js"() {
-    init_modules_watch_stub();
     init_auth();
     init_db();
     init_email();
@@ -1417,14 +1438,7 @@ var init_plan = __esm({
   }
 });
 
-// .wrangler/tmp/bundle-MFJT6A/middleware-loader.entry.ts
-init_modules_watch_stub();
-
-// .wrangler/tmp/bundle-MFJT6A/middleware-insertion-facade.js
-init_modules_watch_stub();
-
 // src/index.js
-init_modules_watch_stub();
 init_pricing();
 init_auth();
 init_db();
@@ -1433,7 +1447,6 @@ init_http();
 init_plans();
 
 // src/routing.js
-init_modules_watch_stub();
 var ORS_PROFILE = {
   bicycle: "cycling-regular",
   motorbike: "driving-car",
@@ -1491,7 +1504,6 @@ async function fetchRouteMetrics(env, origin, destination, vehicle) {
 __name(fetchRouteMetrics, "fetchRouteMetrics");
 
 // src/validate.js
-init_modules_watch_stub();
 var GHANA = {
   latMin: 4.5,
   latMax: 11.5,
@@ -1499,15 +1511,51 @@ var GHANA = {
   lngMax: 1.5
 };
 var SUPPORTED_VEHICLES = /* @__PURE__ */ new Set(["bicycle", "motorbike", "car"]);
+var MIN_ADDRESS_LENGTH = 3;
 function isInGhana(lat, lng) {
   return lat >= GHANA.latMin && lat <= GHANA.latMax && lng >= GHANA.lngMin && lng <= GHANA.lngMax;
 }
 __name(isInGhana, "isInGhana");
+function parseLocationInput(input) {
+  if (typeof input === "string") {
+    const address2 = input.trim();
+    if (address2.length < MIN_ADDRESS_LENGTH) return { kind: "invalid" };
+    return { kind: "address", address: address2 };
+  }
+  if (!input || typeof input !== "object") {
+    return { kind: "invalid" };
+  }
+  const address = typeof input.address === "string" ? input.address.trim() : "";
+  const hasCoords = typeof input.lat === "number" && typeof input.lng === "number" && !Number.isNaN(input.lat) && !Number.isNaN(input.lng);
+  if (address && hasCoords) {
+    return {
+      kind: "coordinates",
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === "string" ? input.label.trim() : void 0,
+      address
+    };
+  }
+  if (address) {
+    if (address.length < MIN_ADDRESS_LENGTH) return { kind: "invalid" };
+    return { kind: "address", address };
+  }
+  if (hasCoords) {
+    return {
+      kind: "coordinates",
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === "string" ? input.label.trim() : void 0
+    };
+  }
+  return { kind: "invalid" };
+}
+__name(parseLocationInput, "parseLocationInput");
 function validateQuoteRequest(body) {
   if (!body || typeof body !== "object") {
     return { ok: false, status: 400, code: "INVALID_REQUEST", message: "JSON body required." };
   }
-  const { origin, destination, vehicle } = body;
+  const { vehicle } = body;
   if (!SUPPORTED_VEHICLES.has(vehicle)) {
     return {
       ok: false,
@@ -1516,24 +1564,39 @@ function validateQuoteRequest(body) {
       message: "Vehicle type not recognized."
     };
   }
-  for (const label of ["origin", "destination"]) {
-    const point = body[label];
-    if (!point || typeof point.lat !== "number" || typeof point.lng !== "number" || Number.isNaN(point.lat) || Number.isNaN(point.lng)) {
-      return {
-        ok: false,
-        status: 400,
-        code: "INVALID_COORDINATES",
-        message: `${label} must include numeric lat and lng.`
-      };
-    }
-    if (!isInGhana(point.lat, point.lng)) {
-      return {
-        ok: false,
-        status: 400,
-        code: "INVALID_COORDINATES",
-        message: "Lat/lng out of supported Ghana bounds."
-      };
-    }
+  const origin = parseLocationInput(body.origin);
+  const destination = parseLocationInput(body.destination);
+  if (origin.kind === "invalid") {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_LOCATION",
+      message: "origin must include { lat, lng } coordinates or an address string (min 3 characters)."
+    };
+  }
+  if (destination.kind === "invalid") {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_LOCATION",
+      message: "destination must include { lat, lng } coordinates or an address string (min 3 characters)."
+    };
+  }
+  if (origin.kind === "coordinates" && !isInGhana(origin.lat, origin.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_COORDINATES",
+      message: "origin coordinates are outside supported Ghana bounds."
+    };
+  }
+  if (destination.kind === "coordinates" && !isInGhana(destination.lat, destination.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_COORDINATES",
+      message: "destination coordinates are outside supported Ghana bounds."
+    };
   }
   return {
     ok: true,
@@ -1548,6 +1611,120 @@ function formatPlaceLabel(lat, lng) {
 }
 __name(formatPlaceLabel, "formatPlaceLabel");
 
+// src/geocoding.js
+var GeocodingError = class extends Error {
+  static {
+    __name(this, "GeocodingError");
+  }
+  constructor(message, status = 422, code = "GEOCODING_FAILED") {
+    super(message);
+    this.name = "GeocodingError";
+    this.status = status;
+    this.code = code;
+  }
+};
+var FOCUS = { lat: 5.6037, lng: -0.187 };
+async function geocodeAddress(env, query) {
+  const apiKey = env.ORS_API_KEY;
+  if (!apiKey) {
+    throw new GeocodingError("Geocoding service not configured", 500);
+  }
+  const text = String(query).trim();
+  const params = new URLSearchParams({
+    text,
+    size: "1",
+    "boundary.country": "GHA",
+    "focus.point.lat": String(FOCUS.lat),
+    "focus.point.lon": String(FOCUS.lng)
+  });
+  const response = await fetch(
+    `https://api.openrouteservice.org/geocode/search?${params}`,
+    {
+      headers: {
+        Authorization: apiKey,
+        Accept: "application/json"
+      }
+    }
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new GeocodingError(
+      detail || `Geocoding provider returned ${response.status}`,
+      response.status === 429 ? 429 : 422
+    );
+  }
+  const data = await response.json();
+  const feature = data?.features?.[0];
+  if (!feature?.geometry?.coordinates) {
+    throw new GeocodingError(
+      `Could not find a location in Ghana for "${text}". Try a more specific address.`,
+      422
+    );
+  }
+  const [lng, lat] = feature.geometry.coordinates;
+  if (!isInGhana(lat, lng)) {
+    throw new GeocodingError(
+      `Resolved location for "${text}" is outside supported Ghana bounds.`,
+      422,
+      "INVALID_COORDINATES"
+    );
+  }
+  const props = feature.properties || {};
+  const label = props.label || props.name || text;
+  return {
+    lat,
+    lng,
+    label,
+    address: text
+  };
+}
+__name(geocodeAddress, "geocodeAddress");
+
+// src/locations.js
+async function resolveLocation(env, parsed, role) {
+  if (parsed.kind === "coordinates") {
+    if (!isInGhana(parsed.lat, parsed.lng)) {
+      throw new GeocodingError(
+        `${role} coordinates are outside supported Ghana bounds.`,
+        400,
+        "INVALID_COORDINATES"
+      );
+    }
+    return {
+      lat: parsed.lat,
+      lng: parsed.lng,
+      label: parsed.label || formatPlaceLabel(parsed.lat, parsed.lng),
+      address: parsed.address || null
+    };
+  }
+  if (parsed.kind === "address") {
+    return geocodeAddress(env, parsed.address);
+  }
+  throw new GeocodingError(`Invalid ${role} location.`, 400, "INVALID_REQUEST");
+}
+__name(resolveLocation, "resolveLocation");
+async function resolveQuoteLocations(env, { origin, destination }) {
+  const [resolvedOrigin, resolvedDestination] = await Promise.all([
+    resolveLocation(env, origin, "origin"),
+    resolveLocation(env, destination, "destination")
+  ]);
+  return {
+    origin: resolvedOrigin,
+    destination: resolvedDestination
+  };
+}
+__name(resolveQuoteLocations, "resolveQuoteLocations");
+function formatRoutePoint(point) {
+  const payload = {
+    label: point.label,
+    lat: Math.round(point.lat * 1e6) / 1e6,
+    lng: Math.round(point.lng * 1e6) / 1e6
+  };
+  if (point.address) payload.address = point.address;
+  return payload;
+}
+__name(formatRoutePoint, "formatRoutePoint");
+
 // src/index.js
 init_wallet();
 async function handleHealth(request, env) {
@@ -1556,8 +1733,9 @@ async function handleHealth(request, env) {
     {
       status: "ok",
       service: "any3mi-api",
-      version: "4.1.0",
+      version: "5.0.0",
       routing: env.ORS_API_KEY ? "openrouteservice" : "unconfigured",
+      geocoding: env.ORS_API_KEY ? "openrouteservice" : "unconfigured",
       database: hasDatabase(env) ? "connected" : "unconfigured",
       email: isEmailConfigured(env) ? "resend" : "unconfigured"
     },
@@ -1596,6 +1774,15 @@ async function handleQuote(request, env) {
     );
   }
   const { origin, destination, vehicle } = validation.value;
+  let resolved;
+  try {
+    resolved = await resolveQuoteLocations(env, { origin, destination });
+  } catch (err) {
+    if (err instanceof GeocodingError) {
+      return errorResponse(err.code, err.code, err.message, err.status, headers);
+    }
+    throw err;
+  }
   if (auth.account && hasDatabase(env)) {
     const rateCheck = await checkRateLimit(env.DB, auth.account.id);
     if (!rateCheck.ok) {
@@ -1604,7 +1791,12 @@ async function handleQuote(request, env) {
   }
   let metrics;
   try {
-    metrics = await fetchRouteMetrics(env, origin, destination, vehicle);
+    metrics = await fetchRouteMetrics(
+      env,
+      resolved.origin,
+      resolved.destination,
+      vehicle
+    );
   } catch (err) {
     if (err instanceof RoutingError) {
       return errorResponse(
@@ -1667,8 +1859,8 @@ async function handleQuote(request, env) {
       accountId: auth.account.id,
       apiKeyId: auth.apiKeyId,
       vehicle,
-      origin,
-      destination,
+      origin: resolved.origin,
+      destination: resolved.destination,
       distanceKm: quote.distance_km,
       durationMins: quote.duration_mins,
       priceGhs: quote.price_ghs,
@@ -1679,8 +1871,8 @@ async function handleQuote(request, env) {
     {
       status: "success",
       route: {
-        origin: formatPlaceLabel(origin.lat, origin.lng),
-        destination: formatPlaceLabel(destination.lat, destination.lng)
+        origin: formatRoutePoint(resolved.origin),
+        destination: formatRoutePoint(resolved.destination)
       },
       billing: billed ? { mode: "payg", cost_ghs: COST_PER_CALL } : { mode: "free_tier", cost_ghs: 0 },
       ...quote
@@ -1690,7 +1882,7 @@ async function handleQuote(request, env) {
   );
 }
 __name(handleQuote, "handleQuote");
-var src_default = {
+var index_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const headers = corsHeaders(request, env);
@@ -1759,189 +1951,7 @@ var src_default = {
     }
   }
 };
-
-// node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
-init_modules_watch_stub();
-var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } finally {
-    try {
-      if (request.body !== null && !request.bodyUsed) {
-        const reader = request.body.getReader();
-        while (!(await reader.read()).done) {
-        }
-      }
-    } catch (e) {
-      console.error("Failed to drain the unused request body.", e);
-    }
-  }
-}, "drainBody");
-var middleware_ensure_req_body_drained_default = drainBody;
-
-// node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
-init_modules_watch_stub();
-function reduceError(e) {
-  return {
-    name: e?.name,
-    message: e?.message ?? String(e),
-    stack: e?.stack,
-    cause: e?.cause === void 0 ? void 0 : reduceError(e.cause)
-  };
-}
-__name(reduceError, "reduceError");
-var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
-  try {
-    return await middlewareCtx.next(request, env);
-  } catch (e) {
-    const error = reduceError(e);
-    const body = JSON.stringify(error);
-    const headers = {
-      "Content-Type": "application/json",
-      "MF-Experimental-Error-Stack": "true"
-    };
-    const encoded = encodeURIComponent(body);
-    if (encoded.length <= 8192) {
-      headers["MF-Experimental-Error-Stack-Payload"] = encoded;
-    }
-    return new Response(body, { status: 500, headers });
-  }
-}, "jsonError");
-var middleware_miniflare3_json_error_default = jsonError;
-
-// .wrangler/tmp/bundle-MFJT6A/middleware-insertion-facade.js
-var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-  middleware_ensure_req_body_drained_default,
-  middleware_miniflare3_json_error_default
-];
-var middleware_insertion_facade_default = src_default;
-
-// node_modules/wrangler/templates/middleware/common.ts
-init_modules_watch_stub();
-var __facade_middleware__ = [];
-function __facade_register__(...args) {
-  __facade_middleware__.push(...args.flat());
-}
-__name(__facade_register__, "__facade_register__");
-function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
-  const [head, ...tail] = middlewareChain;
-  const middlewareCtx = {
-    dispatch,
-    next(newRequest, newEnv) {
-      return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
-    }
-  };
-  return head(request, env, ctx, middlewareCtx);
-}
-__name(__facade_invokeChain__, "__facade_invokeChain__");
-function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
-  return __facade_invokeChain__(request, env, ctx, dispatch, [
-    ...__facade_middleware__,
-    finalMiddleware
-  ]);
-}
-__name(__facade_invoke__, "__facade_invoke__");
-
-// .wrangler/tmp/bundle-MFJT6A/middleware-loader.entry.ts
-var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
-  constructor(scheduledTime, cron, noRetry) {
-    this.scheduledTime = scheduledTime;
-    this.cron = cron;
-    this.#noRetry = noRetry;
-  }
-  scheduledTime;
-  cron;
-  static {
-    __name(this, "__Facade_ScheduledController__");
-  }
-  #noRetry;
-  noRetry() {
-    if (!(this instanceof ___Facade_ScheduledController__)) {
-      throw new TypeError("Illegal invocation");
-    }
-    this.#noRetry();
-  }
-};
-function wrapExportedHandler(worker) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
-    return worker;
-  }
-  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
-    __facade_register__(middleware);
-  }
-  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
-    if (worker.fetch === void 0) {
-      throw new Error("Handler does not export a fetch() function.");
-    }
-    return worker.fetch(request, env, ctx);
-  }, "fetchDispatcher");
-  return {
-    ...worker,
-    fetch(request, env, ctx) {
-      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
-        if (type === "scheduled" && worker.scheduled !== void 0) {
-          const controller = new __Facade_ScheduledController__(
-            Date.now(),
-            init.cron ?? "",
-            () => {
-            }
-          );
-          return worker.scheduled(controller, env, ctx);
-        }
-      }, "dispatcher");
-      return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
-    }
-  };
-}
-__name(wrapExportedHandler, "wrapExportedHandler");
-function wrapWorkerEntrypoint(klass) {
-  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
-    return klass;
-  }
-  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
-    __facade_register__(middleware);
-  }
-  return class extends klass {
-    #fetchDispatcher = /* @__PURE__ */ __name((request, env, ctx) => {
-      this.env = env;
-      this.ctx = ctx;
-      if (super.fetch === void 0) {
-        throw new Error("Entrypoint class does not define a fetch() function.");
-      }
-      return super.fetch(request);
-    }, "#fetchDispatcher");
-    #dispatcher = /* @__PURE__ */ __name((type, init) => {
-      if (type === "scheduled" && super.scheduled !== void 0) {
-        const controller = new __Facade_ScheduledController__(
-          Date.now(),
-          init.cron ?? "",
-          () => {
-          }
-        );
-        return super.scheduled(controller);
-      }
-    }, "#dispatcher");
-    fetch(request) {
-      return __facade_invoke__(
-        request,
-        this.env,
-        this.ctx,
-        this.#dispatcher,
-        this.#fetchDispatcher
-      );
-    }
-  };
-}
-__name(wrapWorkerEntrypoint, "wrapWorkerEntrypoint");
-var WRAPPED_ENTRY;
-if (typeof middleware_insertion_facade_default === "object") {
-  WRAPPED_ENTRY = wrapExportedHandler(middleware_insertion_facade_default);
-} else if (typeof middleware_insertion_facade_default === "function") {
-  WRAPPED_ENTRY = wrapWorkerEntrypoint(middleware_insertion_facade_default);
-}
-var middleware_loader_entry_default = WRAPPED_ENTRY;
 export {
-  __INTERNAL_WRANGLER_MIDDLEWARE__,
-  middleware_loader_entry_default as default
+  index_default as default
 };
 //# sourceMappingURL=index.js.map

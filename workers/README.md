@@ -133,8 +133,14 @@ Request body matches the docs playground:
 
 ```json
 {
-  "origin": { "lat": 5.638, "lng": -0.154 },
-  "destination": { "lat": 5.571, "lng": -0.214 },
+  "origin": { "address": "East Legon, Accra" },
+  "destination": { "address": "Kwame Nkrumah Circle, Accra" },
   "vehicle": "motorbike"
 }
 ```
+
+Coordinates are still supported: `{ "lat": 5.638, "lng": -0.154 }`.
+
+### Geocoding (v5.0)
+
+Pickup and drop-off accept **addresses** or **coordinates**. Addresses are geocoded via OpenRouteService (Pelias), biased to Ghana (`boundary.country=GHA`, Accra focus). Responses include resolved `label`, `lat`, `lng`, and optional `address` on each route stop.

@@ -51,13 +51,46 @@ function calculateQuote(rates, vehicle, distanceKm, durationMins) {
 }
 function getMockRoute() {
   return {
-    origin: { name: "East Legon", lat: 5.638, lng: -0.154 },
-    destination: { name: "Circle, Accra", lat: 5.571, lng: -0.214 },
+    origin: {
+      name: "East Legon, Accra",
+      address: "East Legon, Accra",
+      lat: 5.638,
+      lng: -0.154
+    },
+    destination: {
+      name: "Circle, Accra",
+      address: "Circle, Accra",
+      lat: 5.571,
+      lng: -0.214
+    },
     distanceKm: 8.4,
     durationMins: 24
   };
 }
-function buildQuoteResponse(rates, vehicle, route) {
+function routePointFromInput(input, fallback) {
+  if (typeof input === "string" && input.trim()) {
+    return { ...fallback, address: input.trim(), name: input.trim() };
+  }
+  if (input?.address) {
+    return {
+      ...fallback,
+      address: input.address,
+      name: input.label || input.address,
+      lat: input.lat ?? fallback.lat,
+      lng: input.lng ?? fallback.lng
+    };
+  }
+  if (typeof input?.lat === "number" && typeof input?.lng === "number") {
+    return {
+      ...fallback,
+      lat: input.lat,
+      lng: input.lng,
+      name: input.label || fallback.name
+    };
+  }
+  return fallback;
+}
+function buildQuoteResponse(rates, vehicle, route, { originInput, destinationInput } = {}) {
   const quote = calculateQuote(
     rates,
     vehicle,
@@ -65,11 +98,23 @@ function buildQuoteResponse(rates, vehicle, route) {
     route.durationMins
   );
   if (!quote) return null;
+  const origin = routePointFromInput(originInput, route.origin);
+  const destination = routePointFromInput(destinationInput, route.destination);
   return {
     status: "success",
     route: {
-      origin: route.origin.name,
-      destination: route.destination.name
+      origin: {
+        label: origin.name,
+        lat: origin.lat,
+        lng: origin.lng,
+        ...origin.address ? { address: origin.address } : {}
+      },
+      destination: {
+        label: destination.name,
+        lat: destination.lat,
+        lng: destination.lng,
+        ...destination.address ? { address: destination.address } : {}
+      }
     },
     ...quote
   };
@@ -86,6 +131,7 @@ var init_pricing = __esm({
     vehicleTypes = ["bicycle", "motorbike", "car"];
     __name(calculateQuote, "calculateQuote");
     __name(getMockRoute, "getMockRoute");
+    __name(routePointFromInput, "routePointFromInput");
     __name(buildQuoteResponse, "buildQuoteResponse");
   }
 });
@@ -1490,6 +1536,12 @@ async function fetchRouteMetrics(env, origin, destination, vehicle) {
 }
 __name(fetchRouteMetrics, "fetchRouteMetrics");
 
+// src/locations.js
+init_modules_watch_stub();
+
+// src/geocoding.js
+init_modules_watch_stub();
+
 // src/validate.js
 init_modules_watch_stub();
 var GHANA = {
@@ -1499,15 +1551,51 @@ var GHANA = {
   lngMax: 1.5
 };
 var SUPPORTED_VEHICLES = /* @__PURE__ */ new Set(["bicycle", "motorbike", "car"]);
+var MIN_ADDRESS_LENGTH = 3;
 function isInGhana(lat, lng) {
   return lat >= GHANA.latMin && lat <= GHANA.latMax && lng >= GHANA.lngMin && lng <= GHANA.lngMax;
 }
 __name(isInGhana, "isInGhana");
+function parseLocationInput(input) {
+  if (typeof input === "string") {
+    const address2 = input.trim();
+    if (address2.length < MIN_ADDRESS_LENGTH) return { kind: "invalid" };
+    return { kind: "address", address: address2 };
+  }
+  if (!input || typeof input !== "object") {
+    return { kind: "invalid" };
+  }
+  const address = typeof input.address === "string" ? input.address.trim() : "";
+  const hasCoords = typeof input.lat === "number" && typeof input.lng === "number" && !Number.isNaN(input.lat) && !Number.isNaN(input.lng);
+  if (address && hasCoords) {
+    return {
+      kind: "coordinates",
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === "string" ? input.label.trim() : void 0,
+      address
+    };
+  }
+  if (address) {
+    if (address.length < MIN_ADDRESS_LENGTH) return { kind: "invalid" };
+    return { kind: "address", address };
+  }
+  if (hasCoords) {
+    return {
+      kind: "coordinates",
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === "string" ? input.label.trim() : void 0
+    };
+  }
+  return { kind: "invalid" };
+}
+__name(parseLocationInput, "parseLocationInput");
 function validateQuoteRequest(body) {
   if (!body || typeof body !== "object") {
     return { ok: false, status: 400, code: "INVALID_REQUEST", message: "JSON body required." };
   }
-  const { origin, destination, vehicle } = body;
+  const { vehicle } = body;
   if (!SUPPORTED_VEHICLES.has(vehicle)) {
     return {
       ok: false,
@@ -1516,24 +1604,39 @@ function validateQuoteRequest(body) {
       message: "Vehicle type not recognized."
     };
   }
-  for (const label of ["origin", "destination"]) {
-    const point = body[label];
-    if (!point || typeof point.lat !== "number" || typeof point.lng !== "number" || Number.isNaN(point.lat) || Number.isNaN(point.lng)) {
-      return {
-        ok: false,
-        status: 400,
-        code: "INVALID_COORDINATES",
-        message: `${label} must include numeric lat and lng.`
-      };
-    }
-    if (!isInGhana(point.lat, point.lng)) {
-      return {
-        ok: false,
-        status: 400,
-        code: "INVALID_COORDINATES",
-        message: "Lat/lng out of supported Ghana bounds."
-      };
-    }
+  const origin = parseLocationInput(body.origin);
+  const destination = parseLocationInput(body.destination);
+  if (origin.kind === "invalid") {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_LOCATION",
+      message: "origin must include { lat, lng } coordinates or an address string (min 3 characters)."
+    };
+  }
+  if (destination.kind === "invalid") {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_LOCATION",
+      message: "destination must include { lat, lng } coordinates or an address string (min 3 characters)."
+    };
+  }
+  if (origin.kind === "coordinates" && !isInGhana(origin.lat, origin.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_COORDINATES",
+      message: "origin coordinates are outside supported Ghana bounds."
+    };
+  }
+  if (destination.kind === "coordinates" && !isInGhana(destination.lat, destination.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: "INVALID_COORDINATES",
+      message: "destination coordinates are outside supported Ghana bounds."
+    };
   }
   return {
     ok: true,
@@ -1548,6 +1651,120 @@ function formatPlaceLabel(lat, lng) {
 }
 __name(formatPlaceLabel, "formatPlaceLabel");
 
+// src/geocoding.js
+var GeocodingError = class extends Error {
+  static {
+    __name(this, "GeocodingError");
+  }
+  constructor(message, status = 422, code = "GEOCODING_FAILED") {
+    super(message);
+    this.name = "GeocodingError";
+    this.status = status;
+    this.code = code;
+  }
+};
+var FOCUS = { lat: 5.6037, lng: -0.187 };
+async function geocodeAddress(env, query) {
+  const apiKey = env.ORS_API_KEY;
+  if (!apiKey) {
+    throw new GeocodingError("Geocoding service not configured", 500);
+  }
+  const text = String(query).trim();
+  const params = new URLSearchParams({
+    text,
+    size: "1",
+    "boundary.country": "GHA",
+    "focus.point.lat": String(FOCUS.lat),
+    "focus.point.lon": String(FOCUS.lng)
+  });
+  const response = await fetch(
+    `https://api.openrouteservice.org/geocode/search?${params}`,
+    {
+      headers: {
+        Authorization: apiKey,
+        Accept: "application/json"
+      }
+    }
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new GeocodingError(
+      detail || `Geocoding provider returned ${response.status}`,
+      response.status === 429 ? 429 : 422
+    );
+  }
+  const data = await response.json();
+  const feature = data?.features?.[0];
+  if (!feature?.geometry?.coordinates) {
+    throw new GeocodingError(
+      `Could not find a location in Ghana for "${text}". Try a more specific address.`,
+      422
+    );
+  }
+  const [lng, lat] = feature.geometry.coordinates;
+  if (!isInGhana(lat, lng)) {
+    throw new GeocodingError(
+      `Resolved location for "${text}" is outside supported Ghana bounds.`,
+      422,
+      "INVALID_COORDINATES"
+    );
+  }
+  const props = feature.properties || {};
+  const label = props.label || props.name || text;
+  return {
+    lat,
+    lng,
+    label,
+    address: text
+  };
+}
+__name(geocodeAddress, "geocodeAddress");
+
+// src/locations.js
+async function resolveLocation(env, parsed, role) {
+  if (parsed.kind === "coordinates") {
+    if (!isInGhana(parsed.lat, parsed.lng)) {
+      throw new GeocodingError(
+        `${role} coordinates are outside supported Ghana bounds.`,
+        400,
+        "INVALID_COORDINATES"
+      );
+    }
+    return {
+      lat: parsed.lat,
+      lng: parsed.lng,
+      label: parsed.label || formatPlaceLabel(parsed.lat, parsed.lng),
+      address: parsed.address || null
+    };
+  }
+  if (parsed.kind === "address") {
+    return geocodeAddress(env, parsed.address);
+  }
+  throw new GeocodingError(`Invalid ${role} location.`, 400, "INVALID_REQUEST");
+}
+__name(resolveLocation, "resolveLocation");
+async function resolveQuoteLocations(env, { origin, destination }) {
+  const [resolvedOrigin, resolvedDestination] = await Promise.all([
+    resolveLocation(env, origin, "origin"),
+    resolveLocation(env, destination, "destination")
+  ]);
+  return {
+    origin: resolvedOrigin,
+    destination: resolvedDestination
+  };
+}
+__name(resolveQuoteLocations, "resolveQuoteLocations");
+function formatRoutePoint(point) {
+  const payload = {
+    label: point.label,
+    lat: Math.round(point.lat * 1e6) / 1e6,
+    lng: Math.round(point.lng * 1e6) / 1e6
+  };
+  if (point.address) payload.address = point.address;
+  return payload;
+}
+__name(formatRoutePoint, "formatRoutePoint");
+
 // src/index.js
 init_wallet();
 async function handleHealth(request, env) {
@@ -1556,8 +1773,9 @@ async function handleHealth(request, env) {
     {
       status: "ok",
       service: "any3mi-api",
-      version: "4.1.0",
+      version: "5.0.0",
       routing: env.ORS_API_KEY ? "openrouteservice" : "unconfigured",
+      geocoding: env.ORS_API_KEY ? "openrouteservice" : "unconfigured",
       database: hasDatabase(env) ? "connected" : "unconfigured",
       email: isEmailConfigured(env) ? "resend" : "unconfigured"
     },
@@ -1596,6 +1814,15 @@ async function handleQuote(request, env) {
     );
   }
   const { origin, destination, vehicle } = validation.value;
+  let resolved;
+  try {
+    resolved = await resolveQuoteLocations(env, { origin, destination });
+  } catch (err) {
+    if (err instanceof GeocodingError) {
+      return errorResponse(err.code, err.code, err.message, err.status, headers);
+    }
+    throw err;
+  }
   if (auth.account && hasDatabase(env)) {
     const rateCheck = await checkRateLimit(env.DB, auth.account.id);
     if (!rateCheck.ok) {
@@ -1604,7 +1831,12 @@ async function handleQuote(request, env) {
   }
   let metrics;
   try {
-    metrics = await fetchRouteMetrics(env, origin, destination, vehicle);
+    metrics = await fetchRouteMetrics(
+      env,
+      resolved.origin,
+      resolved.destination,
+      vehicle
+    );
   } catch (err) {
     if (err instanceof RoutingError) {
       return errorResponse(
@@ -1667,8 +1899,8 @@ async function handleQuote(request, env) {
       accountId: auth.account.id,
       apiKeyId: auth.apiKeyId,
       vehicle,
-      origin,
-      destination,
+      origin: resolved.origin,
+      destination: resolved.destination,
       distanceKm: quote.distance_km,
       durationMins: quote.duration_mins,
       priceGhs: quote.price_ghs,
@@ -1679,8 +1911,8 @@ async function handleQuote(request, env) {
     {
       status: "success",
       route: {
-        origin: formatPlaceLabel(origin.lat, origin.lng),
-        destination: formatPlaceLabel(destination.lat, destination.lng)
+        origin: formatRoutePoint(resolved.origin),
+        destination: formatRoutePoint(resolved.destination)
       },
       billing: billed ? { mode: "payg", cost_ghs: COST_PER_CALL } : { mode: "free_tier", cost_ghs: 0 },
       ...quote

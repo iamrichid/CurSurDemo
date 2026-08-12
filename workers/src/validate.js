@@ -7,6 +7,7 @@ const GHANA = {
 }
 
 const SUPPORTED_VEHICLES = new Set(['bicycle', 'motorbike', 'car'])
+const MIN_ADDRESS_LENGTH = 3
 
 export function isInGhana(lat, lng) {
   return (
@@ -17,12 +18,61 @@ export function isInGhana(lat, lng) {
   )
 }
 
+/**
+ * Parse origin/destination from coordinates, { address }, or plain string.
+ */
+export function parseLocationInput(input) {
+  if (typeof input === 'string') {
+    const address = input.trim()
+    if (address.length < MIN_ADDRESS_LENGTH) return { kind: 'invalid' }
+    return { kind: 'address', address }
+  }
+
+  if (!input || typeof input !== 'object') {
+    return { kind: 'invalid' }
+  }
+
+  const address =
+    typeof input.address === 'string' ? input.address.trim() : ''
+  const hasCoords =
+    typeof input.lat === 'number' &&
+    typeof input.lng === 'number' &&
+    !Number.isNaN(input.lat) &&
+    !Number.isNaN(input.lng)
+
+  if (address && hasCoords) {
+    return {
+      kind: 'coordinates',
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === 'string' ? input.label.trim() : undefined,
+      address,
+    }
+  }
+
+  if (address) {
+    if (address.length < MIN_ADDRESS_LENGTH) return { kind: 'invalid' }
+    return { kind: 'address', address }
+  }
+
+  if (hasCoords) {
+    return {
+      kind: 'coordinates',
+      lat: input.lat,
+      lng: input.lng,
+      label: typeof input.label === 'string' ? input.label.trim() : undefined,
+    }
+  }
+
+  return { kind: 'invalid' }
+}
+
 export function validateQuoteRequest(body) {
   if (!body || typeof body !== 'object') {
     return { ok: false, status: 400, code: 'INVALID_REQUEST', message: 'JSON body required.' }
   }
 
-  const { origin, destination, vehicle } = body
+  const { vehicle } = body
 
   if (!SUPPORTED_VEHICLES.has(vehicle)) {
     return {
@@ -33,30 +83,44 @@ export function validateQuoteRequest(body) {
     }
   }
 
-  for (const label of ['origin', 'destination']) {
-    const point = body[label]
-    if (
-      !point ||
-      typeof point.lat !== 'number' ||
-      typeof point.lng !== 'number' ||
-      Number.isNaN(point.lat) ||
-      Number.isNaN(point.lng)
-    ) {
-      return {
-        ok: false,
-        status: 400,
-        code: 'INVALID_COORDINATES',
-        message: `${label} must include numeric lat and lng.`,
-      }
-    }
+  const origin = parseLocationInput(body.origin)
+  const destination = parseLocationInput(body.destination)
 
-    if (!isInGhana(point.lat, point.lng)) {
-      return {
-        ok: false,
-        status: 400,
-        code: 'INVALID_COORDINATES',
-        message: 'Lat/lng out of supported Ghana bounds.',
-      }
+  if (origin.kind === 'invalid') {
+    return {
+      ok: false,
+      status: 400,
+      code: 'INVALID_LOCATION',
+      message:
+        'origin must include { lat, lng } coordinates or an address string (min 3 characters).',
+    }
+  }
+
+  if (destination.kind === 'invalid') {
+    return {
+      ok: false,
+      status: 400,
+      code: 'INVALID_LOCATION',
+      message:
+        'destination must include { lat, lng } coordinates or an address string (min 3 characters).',
+    }
+  }
+
+  if (origin.kind === 'coordinates' && !isInGhana(origin.lat, origin.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'INVALID_COORDINATES',
+      message: 'origin coordinates are outside supported Ghana bounds.',
+    }
+  }
+
+  if (destination.kind === 'coordinates' && !isInGhana(destination.lat, destination.lng)) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'INVALID_COORDINATES',
+      message: 'destination coordinates are outside supported Ghana bounds.',
     }
   }
 

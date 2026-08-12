@@ -43,8 +43,16 @@ describe('buildQuoteResponse', () => {
     expect(response).toMatchObject({
       status: 'success',
       route: {
-        origin: 'East Legon',
-        destination: 'Circle, Accra',
+        origin: {
+          label: 'East Legon, Accra',
+          lat: 5.638,
+          lng: -0.154,
+        },
+        destination: {
+          label: 'Circle, Accra',
+          lat: 5.571,
+          lng: -0.214,
+        },
       },
       vehicle: 'Car',
       currency: 'GHS',

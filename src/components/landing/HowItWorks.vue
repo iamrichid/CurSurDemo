@@ -19,7 +19,7 @@ const steps = [
   {
     num: '02',
     title: 'Plug in Coordinates',
-    desc: 'Send origin and destination lat/lng pairs via a simple REST POST. We handle the routing.',
+    desc: 'Send pickup and drop-off addresses (or lat/lng). ANY3MI geocodes and routes server-side.',
     icon: 'pin',
     docLink: '/docs#quote',
     docLabel: 'Quote API',

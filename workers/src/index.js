@@ -13,7 +13,12 @@ import {
   shouldChargeForQuote,
 } from './plans.js'
 import { fetchRouteMetrics, RoutingError } from './routing.js'
-import { formatPlaceLabel, validateQuoteRequest } from './validate.js'
+import {
+  formatRoutePoint,
+  GeocodingError,
+  resolveQuoteLocations,
+} from './locations.js'
+import { validateQuoteRequest } from './validate.js'
 import { debitForApiCall } from './wallet.js'
 
 async function handleHealth(request, env) {
@@ -22,8 +27,9 @@ async function handleHealth(request, env) {
     {
       status: 'ok',
       service: 'any3mi-api',
-      version: '4.1.0',
+      version: '5.0.0',
       routing: env.ORS_API_KEY ? 'openrouteservice' : 'unconfigured',
+      geocoding: env.ORS_API_KEY ? 'openrouteservice' : 'unconfigured',
       database: hasDatabase(env) ? 'connected' : 'unconfigured',
       email: isEmailConfigured(env) ? 'resend' : 'unconfigured',
     },
@@ -67,6 +73,16 @@ async function handleQuote(request, env) {
 
   const { origin, destination, vehicle } = validation.value
 
+  let resolved
+  try {
+    resolved = await resolveQuoteLocations(env, { origin, destination })
+  } catch (err) {
+    if (err instanceof GeocodingError) {
+      return errorResponse(err.code, err.code, err.message, err.status, headers)
+    }
+    throw err
+  }
+
   if (auth.account && hasDatabase(env)) {
     const rateCheck = await checkRateLimit(env.DB, auth.account.id)
     if (!rateCheck.ok) {
@@ -76,7 +92,12 @@ async function handleQuote(request, env) {
 
   let metrics
   try {
-    metrics = await fetchRouteMetrics(env, origin, destination, vehicle)
+    metrics = await fetchRouteMetrics(
+      env,
+      resolved.origin,
+      resolved.destination,
+      vehicle
+    )
   } catch (err) {
     if (err instanceof RoutingError) {
       return errorResponse(
@@ -153,8 +174,8 @@ async function handleQuote(request, env) {
       accountId: auth.account.id,
       apiKeyId: auth.apiKeyId,
       vehicle,
-      origin,
-      destination,
+      origin: resolved.origin,
+      destination: resolved.destination,
       distanceKm: quote.distance_km,
       durationMins: quote.duration_mins,
       priceGhs: quote.price_ghs,
@@ -166,8 +187,8 @@ async function handleQuote(request, env) {
     {
       status: 'success',
       route: {
-        origin: formatPlaceLabel(origin.lat, origin.lng),
-        destination: formatPlaceLabel(destination.lat, destination.lng),
+        origin: formatRoutePoint(resolved.origin),
+        destination: formatRoutePoint(resolved.destination),
       },
       billing: billed
         ? { mode: 'payg', cost_ghs: COST_PER_CALL }

@@ -19,8 +19,8 @@ const apiCode = `const quote = await fetch(
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      origin: { lat: 5.638, lng: -0.154 },
-      destination: { lat: 5.571, lng: -0.214 },
+      origin: { address: 'East Legon, Accra' },
+      destination: { address: 'Kwame Nkrumah Circle, Accra' },
       vehicle: 'motorbike'
     })
   }
@@ -90,7 +90,7 @@ const { price_ghs, distance_km } = await quote.json();
             :hovered="{ scale: 1.03, borderColor: 'var(--color-accent)', transition: { duration: 200 } }"
             class="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-card/80 px-6 py-3.5 text-sm font-semibold text-text backdrop-blur-sm transition-colors duration-300 hover:bg-accent-muted"
           >
-            Try Live Demo
+            Try the API
           </a>
         </div>
 
