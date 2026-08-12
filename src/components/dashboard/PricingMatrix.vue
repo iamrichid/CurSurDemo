@@ -1,43 +1,45 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { defaultRates, vehicleTypes } from '../../utils/pricing.js'
-import { fetchRates, saveRates, DashboardApiError } from '../../services/dashboardApi.js'
+import { DashboardApiError } from '../../services/dashboardApi.js'
+import { useRates } from '../../composables/useRates.js'
 import { useToast } from '../../composables/useToast.js'
 
 const toast = useToast()
+const ratesStore = useRates()
+const { load, persist, syncing } = ratesStore
 
-const rates = reactive(structuredClone(defaultRates))
-const loading = ref(true)
-const saving = ref(false)
+const rates = reactive(ratesStore.getInitialRates())
 const error = ref('')
 const saveMessage = ref('')
+const saving = ref(false)
 const pulsingFields = ref(new Set())
 
 let saveTimer = null
+let hydrating = true
 
-async function loadRates() {
-  loading.value = true
+async function refreshRates() {
   error.value = ''
   try {
-    const data = await fetchRates()
-    Object.assign(rates, structuredClone(data.rates))
+    const fresh = await load({ background: true })
+    Object.assign(rates, structuredClone(fresh))
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not load pricing matrix.'
     toast.error(error.value)
-    Object.assign(rates, structuredClone(defaultRates))
   } finally {
-    loading.value = false
+    hydrating = false
   }
 }
 
 function scheduleSave() {
+  if (hydrating) return
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     saving.value = true
     saveMessage.value = ''
     try {
-      await saveRates(rates)
+      await persist(rates)
       saveMessage.value = 'Saved'
       toast.success('Pricing matrix saved')
       setTimeout(() => { saveMessage.value = '' }, 2000)
@@ -72,7 +74,7 @@ async function resetRates() {
   toast.info('Reset to default rates')
 }
 
-onMounted(loadRates)
+onMounted(refreshRates)
 
 const vehicleAbbr = { bicycle: 'Bi', motorbike: 'Mo', car: 'Ca' }
 
@@ -84,20 +86,17 @@ const fieldLabels = {
 </script>
 
 <template>
-  <div
-    v-motion
-    :initial="{ opacity: 0, y: 12 }"
-    :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
-  >
-    <div class="mb-6 flex items-start justify-between">
+  <div>
+    <div class="mb-6 flex items-start justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-text">Pricing Matrix</h1>
         <p class="mt-1 text-sm text-text-muted">
           Configure base fares and rates. Changes apply instantly to new quotes.
         </p>
       </div>
-      <div class="flex items-center gap-3">
-        <span v-if="saving" class="text-xs text-text-subtle">Saving…</span>
+      <div class="flex shrink-0 items-center gap-3">
+        <span v-if="syncing" class="text-xs text-text-subtle">Syncing…</span>
+        <span v-else-if="saving" class="text-xs text-text-subtle">Saving…</span>
         <span v-else-if="saveMessage" class="text-xs font-medium text-success">{{ saveMessage }}</span>
         <button
           type="button"
@@ -113,16 +112,11 @@ const fieldLabels = {
       {{ error }}
     </p>
 
-    <p v-if="loading" class="text-sm text-text-subtle">Loading rates…</p>
-
-    <div v-else class="space-y-6">
+    <div class="space-y-6">
       <div
-        v-for="(vehicle, vi) in vehicleTypes"
+        v-for="vehicle in vehicleTypes"
         :key="vehicle"
         class="ft-card p-6"
-        v-motion
-        :initial="{ opacity: 0, y: 16 }"
-        :enter="{ opacity: 1, y: 0, transition: { delay: vi * 100, duration: 400 } }"
       >
         <h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-text">
           <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted text-[10px] font-bold uppercase text-accent">

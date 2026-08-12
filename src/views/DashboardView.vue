@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import DashboardSidebar from '../components/dashboard/DashboardSidebar.vue'
 import ThemeToggle from '../components/shared/ThemeToggle.vue'
 import { useAuth } from '../composables/useAuth.js'
+import { useRates, invalidateRatesCache } from '../composables/useRates.js'
 import { useToast } from '../composables/useToast.js'
 import { fetchMe } from '../services/dashboardApi.js'
 
@@ -11,6 +12,7 @@ const router = useRouter()
 const route = useRoute()
 const { logout, getKeyPrefix, getInitials, getAccount, setSession } = useAuth()
 const toast = useToast()
+const { load: loadRates } = useRates()
 
 const orgName = ref(getAccount()?.org_name || 'Developer')
 const keyPrefix = ref(getKeyPrefix())
@@ -28,6 +30,7 @@ const pageTitle = computed(() => {
 })
 
 onMounted(async () => {
+  loadRates({ background: true }).catch(() => {})
   try {
     const data = await fetchMe()
     if (data.account) {
@@ -42,6 +45,7 @@ onMounted(async () => {
 
 function handleLogout() {
   logout()
+  invalidateRatesCache()
   toast.info('Signed out')
   router.push('/dashboard/login')
 }
@@ -110,9 +114,9 @@ function handleLogout() {
 
       <div class="p-4 sm:p-6">
         <RouterView v-slot="{ Component }">
-          <Transition name="panel" mode="out-in">
+          <KeepAlive>
             <component :is="Component" />
-          </Transition>
+          </KeepAlive>
         </RouterView>
       </div>
     </main>
