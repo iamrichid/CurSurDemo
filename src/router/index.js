@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getStoredApiKey } from '../composables/useAuth.js'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,6 +18,11 @@ const router = createRouter({
       path: '/docs',
       name: 'docs',
       component: () => import('../views/DocsView.vue'),
+    },
+    {
+      path: '/dashboard/login',
+      name: 'dashboard-login',
+      component: () => import('../views/DashboardLoginView.vue'),
     },
     {
       path: '/dashboard',
@@ -46,6 +52,20 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const isDashboard = to.path.startsWith('/dashboard')
+  const isLogin = to.path === '/dashboard/login'
+  const hasKey = Boolean(getStoredApiKey())
+
+  if (isDashboard && !isLogin && !hasKey) {
+    return { name: 'dashboard-login' }
+  }
+
+  if (isLogin && hasKey) {
+    return { name: 'dashboard-overview' }
+  }
 })
 
 export default router

@@ -1,10 +1,49 @@
 <script setup>
-import { ref } from 'vue'
-import { usePricing } from '../../composables/usePricing'
+import { ref, reactive, onMounted } from 'vue'
+import { defaultRates, vehicleTypes } from '../../utils/pricing.js'
+import { fetchRates, saveRates, DashboardApiError } from '../../services/dashboardApi.js'
 
-const { rates, vehicleTypes, resetRates } = usePricing()
-
+const rates = reactive(structuredClone(defaultRates))
+const loading = ref(true)
+const saving = ref(false)
+const error = ref('')
+const saveMessage = ref('')
 const pulsingFields = ref(new Set())
+
+let saveTimer = null
+
+async function loadRates() {
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await fetchRates()
+    Object.assign(rates, structuredClone(data.rates))
+  } catch (err) {
+    error.value =
+      err instanceof DashboardApiError ? err.message : 'Could not load pricing matrix.'
+    Object.assign(rates, structuredClone(defaultRates))
+  } finally {
+    loading.value = false
+  }
+}
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    saving.value = true
+    saveMessage.value = ''
+    try {
+      await saveRates(rates)
+      saveMessage.value = 'Saved'
+      setTimeout(() => { saveMessage.value = '' }, 2000)
+    } catch (err) {
+      error.value =
+        err instanceof DashboardApiError ? err.message : 'Could not save pricing matrix.'
+    } finally {
+      saving.value = false
+    }
+  }, 600)
+}
 
 function onFieldChange(vehicle, field) {
   const key = `${vehicle}-${field}`
@@ -14,11 +53,19 @@ function onFieldChange(vehicle, field) {
     next.delete(key)
     pulsingFields.value = next
   }, 600)
+  scheduleSave()
 }
 
 function isPulsing(vehicle, field) {
   return pulsingFields.value.has(`${vehicle}-${field}`)
 }
+
+async function resetRates() {
+  Object.assign(rates, structuredClone(defaultRates))
+  scheduleSave()
+}
+
+onMounted(loadRates)
 
 const fieldLabels = {
   baseFare: 'Base Fare (GH₵)',
@@ -40,16 +87,26 @@ const fieldLabels = {
           Configure base fares and rates. Changes apply instantly to new quotes.
         </p>
       </div>
-      <button
-        type="button"
-        class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-200 hover:border-accent/40 hover:text-accent"
-        @click="resetRates"
-      >
-        Reset defaults
-      </button>
+      <div class="flex items-center gap-3">
+        <span v-if="saving" class="text-xs text-text-subtle">Saving…</span>
+        <span v-else-if="saveMessage" class="text-xs font-medium text-success">{{ saveMessage }}</span>
+        <button
+          type="button"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-200 hover:border-accent/40 hover:text-accent"
+          @click="resetRates"
+        >
+          Reset defaults
+        </button>
+      </div>
     </div>
 
-    <div class="space-y-6">
+    <p v-if="error" class="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+      {{ error }}
+    </p>
+
+    <p v-if="loading" class="text-sm text-text-subtle">Loading rates…</p>
+
+    <div v-else class="space-y-6">
       <div
         v-for="(vehicle, vi) in vehicleTypes"
         :key="vehicle"

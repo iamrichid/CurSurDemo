@@ -2,12 +2,9 @@ import {
   calculateQuote,
   defaultRates,
 } from '../../src/utils/pricing.js'
-import {
-  checkApiKey,
-  corsHeaders,
-  errorResponse,
-  json,
-} from './http.js'
+import { authenticateRequest } from './auth.js'
+import { getRates, hasDatabase, logQuote } from './db.js'
+import { corsHeaders, errorResponse, json } from './http.js'
 import { fetchRouteMetrics, RoutingError } from './routing.js'
 import { formatPlaceLabel, validateQuoteRequest } from './validate.js'
 
@@ -17,8 +14,9 @@ async function handleHealth(request, env) {
     {
       status: 'ok',
       service: 'any3mi-api',
-      version: '1.0.0',
+      version: '2.0.0',
       routing: env.ORS_API_KEY ? 'openrouteservice' : 'unconfigured',
+      database: hasDatabase(env) ? 'connected' : 'unconfigured',
     },
     200,
     headers
@@ -27,8 +25,9 @@ async function handleHealth(request, env) {
 
 async function handleQuote(request, env) {
   const headers = corsHeaders(request, env)
+  const started = Date.now()
 
-  const auth = checkApiKey(request, env)
+  const auth = await authenticateRequest(request, env)
   if (!auth.ok) {
     return errorResponse(auth.code, auth.code, auth.message, auth.status, headers)
   }
@@ -75,8 +74,13 @@ async function handleQuote(request, env) {
     throw err
   }
 
+  const rates =
+    auth.account && hasDatabase(env)
+      ? await getRates(env.DB, auth.account.id)
+      : defaultRates
+
   const quote = calculateQuote(
-    defaultRates,
+    rates,
     vehicle,
     metrics.distanceKm,
     metrics.durationMins
@@ -90,6 +94,22 @@ async function handleQuote(request, env) {
       422,
       headers
     )
+  }
+
+  const latencyMs = Date.now() - started
+
+  if (auth.account && hasDatabase(env)) {
+    await logQuote(env.DB, {
+      accountId: auth.account.id,
+      apiKeyId: auth.apiKeyId,
+      vehicle,
+      origin,
+      destination,
+      distanceKm: quote.distance_km,
+      durationMins: quote.duration_mins,
+      priceGhs: quote.price_ghs,
+      latencyMs,
+    })
   }
 
   return json(
@@ -116,8 +136,39 @@ export default {
     }
 
     try {
+      const { handleRegister, handleLogin, handleRegenerateKey, handleMe, handleUsage, handleGetRates, handlePutRates } =
+        await import('./handlers/account.js')
+
       if (request.method === 'GET' && url.pathname === '/v1/health') {
         return handleHealth(request, env)
+      }
+
+      if (request.method === 'POST' && url.pathname === '/v1/auth/register') {
+        return handleRegister(request, env)
+      }
+
+      if (request.method === 'POST' && url.pathname === '/v1/auth/login') {
+        return handleLogin(request, env)
+      }
+
+      if (request.method === 'POST' && url.pathname === '/v1/auth/regenerate-key') {
+        return handleRegenerateKey(request, env)
+      }
+
+      if (request.method === 'GET' && url.pathname === '/v1/me') {
+        return handleMe(request, env)
+      }
+
+      if (request.method === 'GET' && url.pathname === '/v1/usage') {
+        return handleUsage(request, env)
+      }
+
+      if (request.method === 'GET' && url.pathname === '/v1/rates') {
+        return handleGetRates(request, env)
+      }
+
+      if (request.method === 'PUT' && url.pathname === '/v1/rates') {
+        return handlePutRates(request, env)
       }
 
       if (request.method === 'POST' && url.pathname === '/v1/quote') {
@@ -136,7 +187,7 @@ export default {
       return errorResponse(
         'ROUTING_FAILED',
         'ROUTING_FAILED',
-        'Temporary routing engine error. Safe to retry.',
+        'Temporary server error. Safe to retry.',
         500,
         headers
       )

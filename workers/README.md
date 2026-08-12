@@ -44,8 +44,24 @@ cd workers
 npm install
 npx wrangler login
 npx wrangler secret put ORS_API_KEY
+npm run db:migrate:remote   # Phase 2 — accounts, usage, rates
 npm run deploy
 ```
+
+## Phase 2 endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/v1/auth/register` | No | Create account + API key |
+| `POST` | `/v1/auth/login` | No | Sign in (uses saved key on device) |
+| `POST` | `/v1/auth/regenerate-key` | No | Issue a new API key |
+| `GET` | `/v1/me` | Bearer | Account info |
+| `GET` | `/v1/usage` | Bearer | 7-day usage stats |
+| `GET` | `/v1/rates` | Bearer | Pricing matrix |
+| `PUT` | `/v1/rates` | Bearer | Save pricing matrix |
+| `POST` | `/v1/quote` | Bearer | Quote (logged per account) |
+
+After deploy, open `/dashboard/login` on the frontend to register. Copy your API key, then set `VITE_ANY3MI_API_KEY` in Vercel so the public playground can authenticate.
 
 Wrangler prints your worker URL, e.g. `https://any3mi-api.<account>.workers.dev`.
 

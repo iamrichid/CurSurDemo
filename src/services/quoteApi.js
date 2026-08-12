@@ -28,7 +28,11 @@ export async function fetchQuote({ origin, destination, vehicle }) {
   const baseUrl = getApiBaseUrl()
 
   if (baseUrl) {
-    const apiKey = import.meta.env.VITE_ANY3MI_API_KEY
+    const apiKey =
+      import.meta.env.VITE_ANY3MI_API_KEY ||
+      (typeof localStorage !== 'undefined'
+        ? localStorage.getItem('any3mi-api-key')
+        : '')
     const headers = { 'Content-Type': 'application/json' }
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`
 

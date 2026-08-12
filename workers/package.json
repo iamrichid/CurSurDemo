@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "db:migrate": "wrangler d1 migrations apply any3mi --local",
+    "db:migrate:remote": "wrangler d1 migrations apply any3mi --remote"
   },
   "devDependencies": {
     "wrangler": "^4.24.0"

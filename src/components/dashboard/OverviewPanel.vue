@@ -1,26 +1,64 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import AnimatedCounter from '../shared/AnimatedCounter.vue'
 import UsageChart from '../shared/UsageChart.vue'
-import { usePricing } from '../../composables/usePricing'
+import { fetchUsage, DashboardApiError } from '../../services/dashboardApi.js'
 
-const { apiCalls, totalSpend } = usePricing()
+const loading = ref(true)
+const error = ref('')
+const stats = ref([
+  { label: 'API Requests (7d)', value: 0, prefix: '', suffix: '', decimals: 0 },
+  { label: 'Total Spend', value: 0, prefix: 'GH₵ ', suffix: '', decimals: 2 },
+  { label: 'Avg Response', value: 0, prefix: '', suffix: 'ms', decimals: 0 },
+  { label: 'Success Rate', value: 100, prefix: '', suffix: '%', decimals: 1 },
+])
+const chartData = ref([
+  { label: 'Mon', value: 0 },
+  { label: 'Tue', value: 0 },
+  { label: 'Wed', value: 0 },
+  { label: 'Thu', value: 0 },
+  { label: 'Fri', value: 0 },
+  { label: 'Sat', value: 0 },
+  { label: 'Sun', value: 0 },
+])
+const vehicleBreakdown = ref([])
 
-const chartData = [
-  { label: 'Mon', value: 120 },
-  { label: 'Tue', value: 185 },
-  { label: 'Wed', value: 160 },
-  { label: 'Thu', value: 210 },
-  { label: 'Fri', value: 280 },
-  { label: 'Sat', value: 195 },
-  { label: 'Sun', value: 97 },
-]
+const vehicleLabels = {
+  bicycle: 'Bicycle',
+  motorbike: 'Motorbike',
+  car: 'Car',
+}
 
-const stats = [
-  { label: 'API Requests (7d)', value: apiCalls, prefix: '', suffix: '', decimals: 0 },
-  { label: 'Total Spend', value: totalSpend, prefix: 'GH₵ ', suffix: '', decimals: 2 },
-  { label: 'Avg Response', value: 142, prefix: '', suffix: 'ms', decimals: 0 },
-  { label: 'Success Rate', value: 99.7, prefix: '', suffix: '%', decimals: 1 },
-]
+const vehicleColors = {
+  bicycle: 'bg-success',
+  motorbike: 'bg-accent',
+  car: 'bg-warning',
+}
+
+onMounted(async () => {
+  try {
+    const data = await fetchUsage()
+    stats.value = [
+      { label: 'API Requests (7d)', value: data.total_calls, prefix: '', suffix: '', decimals: 0 },
+      { label: 'Total Spend', value: data.total_spend, prefix: 'GH₵ ', suffix: '', decimals: 2 },
+      { label: 'Avg Response', value: data.avg_latency_ms, prefix: '', suffix: 'ms', decimals: 0 },
+      { label: 'Success Rate', value: data.success_rate, prefix: '', suffix: '%', decimals: 1 },
+    ]
+    chartData.value = data.chart?.length
+      ? data.chart.map((row) => ({ label: row.label, value: row.value }))
+      : chartData.value
+    vehicleBreakdown.value = (data.vehicle_breakdown || []).map((row) => ({
+      vehicle: vehicleLabels[row.vehicle] || row.vehicle,
+      pct: row.pct,
+      color: vehicleColors[row.vehicle] || 'bg-accent',
+    }))
+  } catch (err) {
+    error.value =
+      err instanceof DashboardApiError ? err.message : 'Could not load usage data.'
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -33,6 +71,10 @@ const stats = [
       <h1 class="text-2xl font-bold text-text">Overview</h1>
       <p class="mt-1 text-sm text-text-muted">Your API usage and analytics at a glance.</p>
     </div>
+
+    <p v-if="error" class="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+      {{ error }}
+    </p>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div
@@ -61,16 +103,13 @@ const stats = [
         <h2 class="text-sm font-semibold text-text">API Requests Over Time</h2>
         <span class="rounded-md bg-accent-muted px-2 py-0.5 text-[10px] font-medium text-accent">Last 7 days</span>
       </div>
-      <UsageChart :data="chartData" :height="180" />
+      <p v-if="loading" class="py-8 text-center text-xs text-text-subtle">Loading usage…</p>
+      <UsageChart v-else :data="chartData" :height="180" />
     </div>
 
-    <div class="mt-6 grid gap-4 md:grid-cols-3">
+    <div v-if="vehicleBreakdown.length" class="mt-6 grid gap-4 md:grid-cols-3">
       <div
-        v-for="(item, i) in [
-          { vehicle: 'Motorbike', pct: 62, color: 'bg-accent' },
-          { vehicle: 'Bicycle', pct: 24, color: 'bg-success' },
-          { vehicle: 'Car', pct: 14, color: 'bg-warning' },
-        ]"
+        v-for="(item, i) in vehicleBreakdown"
         :key="item.vehicle"
         class="ft-card p-4"
         v-motion
@@ -90,5 +129,9 @@ const stats = [
         </div>
       </div>
     </div>
+
+    <p v-else-if="!loading" class="mt-6 text-xs text-text-subtle">
+      No quote requests yet — run a quote from the playground or API to populate analytics.
+    </p>
   </div>
 </template>
