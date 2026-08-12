@@ -2,6 +2,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { defaultRates, vehicleTypes } from '../../utils/pricing.js'
 import { fetchRates, saveRates, DashboardApiError } from '../../services/dashboardApi.js'
+import { useToast } from '../../composables/useToast.js'
+
+const toast = useToast()
 
 const rates = reactive(structuredClone(defaultRates))
 const loading = ref(true)
@@ -21,6 +24,7 @@ async function loadRates() {
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not load pricing matrix.'
+    toast.error(error.value)
     Object.assign(rates, structuredClone(defaultRates))
   } finally {
     loading.value = false
@@ -35,10 +39,12 @@ function scheduleSave() {
     try {
       await saveRates(rates)
       saveMessage.value = 'Saved'
+      toast.success('Pricing matrix saved')
       setTimeout(() => { saveMessage.value = '' }, 2000)
     } catch (err) {
       error.value =
         err instanceof DashboardApiError ? err.message : 'Could not save pricing matrix.'
+      toast.error(error.value)
     } finally {
       saving.value = false
     }
@@ -63,6 +69,7 @@ function isPulsing(vehicle, field) {
 async function resetRates() {
   Object.assign(rates, structuredClone(defaultRates))
   scheduleSave()
+  toast.info('Reset to default rates')
 }
 
 onMounted(loadRates)

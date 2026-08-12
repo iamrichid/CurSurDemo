@@ -1,4 +1,5 @@
 <script setup>
+import { RouterLink } from 'vue-router'
 import {
   apiEndpoints,
   curlExample,
@@ -16,6 +17,13 @@ import {
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-text">API Documentation</h1>
       <p class="mt-1 text-sm text-text-muted">Integration reference for the ANY3MI API.</p>
+    </div>
+
+    <div class="mb-6 rounded-xl border border-border bg-surface-muted/40 px-4 py-3 text-sm text-text-muted">
+      Full reference also lives on the public site —
+      <RouterLink to="/docs" class="font-medium text-accent hover:underline">any3mi.com/docs</RouterLink>.
+      Manage keys and wallet from
+      <RouterLink to="/dashboard/keys" class="font-medium text-accent hover:underline">API Keys</RouterLink>.
     </div>
 
     <div class="mb-6 grid gap-3 sm:grid-cols-3">

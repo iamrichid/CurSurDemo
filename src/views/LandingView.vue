@@ -7,6 +7,11 @@ import HowItWorks from '../components/landing/HowItWorks.vue'
 import ApiPlayground from '../components/landing/ApiPlayground.vue'
 import PricingSection from '../components/landing/PricingSection.vue'
 import { brand } from '../data/brand.js'
+import { isLiveApiEnabled } from '../services/quoteApi.js'
+
+const apiHealthUrl = isLiveApiEnabled()
+  ? `${import.meta.env.VITE_ANY3MI_API_URL.replace(/\/$/, '')}/v1/health`
+  : null
 </script>
 
 <template>
@@ -31,11 +36,18 @@ import { brand } from '../data/brand.js'
             class="transition-colors hover:text-accent"
           >{{ brand.nightMarket.name }}</a>.
         </p>
-        <div class="flex gap-4 text-xs text-text-subtle">
+        <div class="flex flex-wrap justify-center gap-4 text-xs text-text-subtle sm:justify-end">
           <RouterLink to="/docs" class="transition-colors hover:text-accent">Docs</RouterLink>
-          <a href="#" class="transition-colors hover:text-text">Privacy</a>
-          <a href="#" class="transition-colors hover:text-text">Terms</a>
-          <a href="#" class="transition-colors hover:text-text">Status</a>
+          <RouterLink to="/dashboard/login?intent=key" class="transition-colors hover:text-accent">Get API Key</RouterLink>
+          <a
+            v-if="apiHealthUrl"
+            :href="apiHealthUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="transition-colors hover:text-accent"
+          >
+            API Status
+          </a>
         </div>
       </div>
     </footer>

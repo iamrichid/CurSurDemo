@@ -54,11 +54,19 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
             <RouterLink to="/#playground" class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-accent/40 hover:text-accent">
               Try playground →
             </RouterLink>
-            <RouterLink to="/dashboard" class="ft-btn-primary px-4 py-1.5 text-xs">
+            <RouterLink to="/dashboard/login?intent=key" class="ft-btn-primary px-4 py-1.5 text-xs">
               Get API Key
             </RouterLink>
           </div>
         </div>
+      </div>
+
+      <div class="mb-8 rounded-xl border border-accent/20 bg-accent-muted/40 px-4 py-3 text-sm text-text-muted">
+        Signed in with an API key?
+        <RouterLink to="/dashboard/docs" class="font-medium text-accent hover:underline">
+          Open dashboard docs
+        </RouterLink>
+        for key-aware examples and account-specific endpoints.
       </div>
 
       <div class="grid gap-10 lg:grid-cols-12">
@@ -118,7 +126,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
             <h2 class="text-xl font-bold text-text">Authentication</h2>
             <p class="mt-3 text-sm leading-relaxed text-text-muted">
               All requests require a Bearer token. Generate keys from your
-              <RouterLink to="/dashboard" class="text-accent hover:underline">developer dashboard</RouterLink>.
+              <RouterLink to="/dashboard/login?intent=key" class="text-accent hover:underline">developer dashboard</RouterLink>.
               Use <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-accent">a3_test_</code> keys in sandbox and <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-accent">a3_live_</code> in production.
             </p>
             <pre class="mt-4 overflow-x-auto rounded-xl border border-border bg-[#0a0a0c] p-4 font-mono text-xs text-text-muted">Authorization: Bearer a3_live_sk_abc123</pre>

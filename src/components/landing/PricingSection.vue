@@ -219,7 +219,7 @@ function formatCalls(n) {
           </ul>
 
           <RouterLink
-            to="/dashboard"
+            to="/dashboard/login?intent=key"
             v-motion
             :hovered="{ scale: 1.02 }"
             :tapped="{ scale: 0.98 }"

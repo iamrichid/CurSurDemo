@@ -27,7 +27,7 @@ const apiCode = `const quote = await fetch(
 );
 
 const { price_ghs, distance_km } = await quote.json();
-// → GH₵ 32.50`
+// → GH₵ 29.12`
 </script>
 
 <template>
@@ -73,7 +73,7 @@ const { price_ghs, distance_km } = await quote.json();
           class="mt-8 flex flex-wrap items-center justify-center gap-4 sm:mt-10"
         >
           <RouterLink
-            to="/dashboard"
+            to="/dashboard/login?intent=key"
             v-motion
             :hovered="{ scale: 1.05, y: -2, transition: { type: 'spring', stiffness: 400, damping: 15 } }"
             :tapped="{ scale: 0.97 }"

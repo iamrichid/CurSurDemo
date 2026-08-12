@@ -2,6 +2,12 @@
 import { RouterLink, useRoute } from 'vue-router'
 import { brand } from '../../data/brand.js'
 
+defineProps({
+  open: { type: Boolean, default: false },
+})
+
+const emit = defineEmits(['close'])
+
 const route = useRoute()
 
 const navItems = [
@@ -11,10 +17,17 @@ const navItems = [
   { to: '/dashboard/pricing', label: 'Pricing Matrix', icon: 'sliders' },
   { to: '/dashboard/docs', label: 'API Docs', icon: 'code' },
 ]
+
+function onNavigate() {
+  emit('close')
+}
 </script>
 
 <template>
-  <aside class="flex w-64 shrink-0 flex-col border-r border-border bg-surface-elevated">
+  <aside
+    class="fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-border bg-surface-elevated transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0"
+    :class="open ? 'translate-x-0' : '-translate-x-full'"
+  >
     <div class="flex items-center gap-2.5 border-b border-border px-5 py-5">
       <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-bold text-accent-foreground shadow-sm shadow-accent/20">
         A3
@@ -25,7 +38,7 @@ const navItems = [
       </div>
     </div>
 
-    <nav class="flex-1 space-y-0.5 p-3">
+    <nav class="flex-1 space-y-0.5 overflow-y-auto p-3">
       <RouterLink
         v-for="item in navItems"
         :key="item.to"
@@ -36,6 +49,7 @@ const navItems = [
             ? 'bg-accent-muted text-accent'
             : 'text-text-muted hover:bg-surface-muted hover:text-text'
         "
+        @click="onNavigate"
       >
         <span
           v-if="route.path === item.to"
@@ -64,6 +78,7 @@ const navItems = [
       <RouterLink
         to="/"
         class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-text-subtle transition-colors hover:bg-surface-muted hover:text-text"
+        @click="onNavigate"
       >
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />

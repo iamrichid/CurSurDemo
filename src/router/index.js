@@ -65,11 +65,19 @@ router.beforeEach((to) => {
   const hasKey = Boolean(getStoredApiKey())
 
   if (isDashboard && !isLogin && !hasKey) {
-    return { name: 'dashboard-login' }
+    return {
+      name: 'dashboard-login',
+      query: {
+        ...to.query,
+        redirect: to.fullPath,
+        ...(to.query.intent ? {} : { intent: 'dashboard' }),
+      },
+    }
   }
 
   if (isLogin && hasKey) {
-    return { name: 'dashboard-overview' }
+    const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : '/dashboard/overview'
+    return redirect
   }
 })
 

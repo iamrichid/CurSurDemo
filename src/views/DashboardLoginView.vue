@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth.js'
+import { useToast } from '../composables/useToast.js'
 import {
   loginAccount,
   registerAccount,
@@ -11,7 +12,9 @@ import {
 import { brand } from '../data/brand.js'
 
 const router = useRouter()
+const route = useRoute()
 const { setSession } = useAuth()
+const toast = useToast()
 
 const mode = ref('register')
 const orgName = ref('')
@@ -20,11 +23,44 @@ const password = ref('')
 const loading = ref(false)
 const error = ref('')
 const newApiKey = ref('')
+const needsKey = ref(false)
+const signedInOrg = ref('')
+
+const intent = computed(() => route.query.intent)
+const redirectPath = computed(() => {
+  const redirect = route.query.redirect
+  return typeof redirect === 'string' && redirect.startsWith('/dashboard')
+    ? redirect
+    : '/dashboard/overview'
+})
+
+const headline = computed(() => {
+  if (intent.value === 'key') return 'Get your API key'
+  if (intent.value === 'dashboard') return 'Sign in to your dashboard'
+  return `${brand.name} Developer Portal`
+})
+
+const subcopy = computed(() => {
+  if (intent.value === 'key') {
+    return 'Create a free account or sign in to receive your Bearer token for live API calls.'
+  }
+  if (needsKey.value) {
+    return 'Your account is verified. Generate an API key to use on this device.'
+  }
+  return 'Create an account to get your API key, wallet credit, and dashboard access.'
+})
+
+onMounted(() => {
+  if (intent.value === 'key' || intent.value === 'dashboard') {
+    mode.value = intent.value === 'dashboard' ? 'login' : 'register'
+  }
+})
 
 async function handleRegister() {
   loading.value = true
   error.value = ''
   newApiKey.value = ''
+  needsKey.value = false
   try {
     const data = await registerAccount({
       org_name: orgName.value,
@@ -33,9 +69,11 @@ async function handleRegister() {
     })
     setSession({ api_key: data.api_key, account: data.account })
     newApiKey.value = data.api_key
+    toast.success('Account created — welcome credit applied')
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Registration failed.'
+    toast.error(error.value)
   } finally {
     loading.value = false
   }
@@ -44,6 +82,7 @@ async function handleRegister() {
 async function handleLogin() {
   loading.value = true
   error.value = ''
+  needsKey.value = false
   try {
     const data = await loginAccount({
       email: email.value,
@@ -52,14 +91,18 @@ async function handleLogin() {
     const existingKey = localStorage.getItem('any3mi-api-key')
     if (existingKey) {
       setSession({ account: data.account, key_prefix: data.key_prefix })
-      router.push('/dashboard/overview')
+      toast.success('Welcome back')
+      router.push(redirectPath.value)
       return
     }
-    error.value =
-      'No saved API key on this device. Use “Regenerate key” below, then sign in again.'
+    setSession({ account: data.account, key_prefix: data.key_prefix })
+    signedInOrg.value = data.account?.org_name || email.value
+    needsKey.value = true
+    toast.info('Signed in — generate a key for this device')
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Login failed.'
+    toast.error(error.value)
   } finally {
     loading.value = false
   }
@@ -76,21 +119,29 @@ async function handleRegenerate() {
     })
     setSession({ api_key: data.api_key, account: data.account })
     newApiKey.value = data.api_key
+    needsKey.value = false
+    toast.success('New API key generated')
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not regenerate key.'
+    toast.error(error.value)
   } finally {
     loading.value = false
   }
 }
 
 function continueToDashboard() {
-  router.push('/dashboard/overview')
+  router.push(redirectPath.value)
 }
 
 async function copyKey() {
   if (!newApiKey.value) return
-  await navigator.clipboard.writeText(newApiKey.value)
+  try {
+    await navigator.clipboard.writeText(newApiKey.value)
+    toast.success('API key copied to clipboard')
+  } catch {
+    toast.error('Could not copy — select the key manually')
+  }
 }
 </script>
 
@@ -101,8 +152,8 @@ async function copyKey() {
         <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-sm font-bold text-accent-foreground shadow-sm shadow-accent/20">
           A3
         </div>
-        <h1 class="text-2xl font-bold text-text">{{ brand.name }} Developer Portal</h1>
-        <p class="mt-2 text-sm text-text-muted">Create an account to get your API key and dashboard access.</p>
+        <h1 class="text-2xl font-bold text-text">{{ headline }}</h1>
+        <p class="mt-2 text-sm text-text-muted">{{ subcopy }}</p>
       </div>
 
       <div v-if="newApiKey" class="ft-card-glow p-6">
@@ -119,6 +170,28 @@ async function copyKey() {
             Open dashboard
           </button>
         </div>
+      </div>
+
+      <div v-else-if="needsKey" class="ft-card-glow p-6">
+        <p class="text-xs font-semibold uppercase tracking-wider text-accent">Key required on this device</p>
+        <p class="mt-2 text-sm text-text-muted">
+          Signed in as <span class="font-medium text-text">{{ signedInOrg }}</span>.
+          Your API key isn't stored here yet — generate one to continue.
+        </p>
+        <p class="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+          Generating a new key revokes the previous one. Update any apps still using the old key.
+        </p>
+        <p v-if="error" class="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+          {{ error }}
+        </p>
+        <button
+          type="button"
+          class="ft-btn-primary mt-4 w-full py-3 text-sm disabled:opacity-60"
+          :disabled="loading"
+          @click="handleRegenerate"
+        >
+          {{ loading ? 'Generating…' : 'Generate API key for this device' }}
+        </button>
       </div>
 
       <div v-else class="ft-card-glow p-6">
@@ -183,7 +256,7 @@ async function copyKey() {
             class="ft-btn-primary w-full py-3 text-sm disabled:opacity-60"
             :disabled="loading"
           >
-            {{ loading ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in' }}
+            {{ loading ? 'Please wait…' : mode === 'register' ? 'Create account & get API key' : 'Sign in' }}
           </button>
         </form>
 
@@ -193,7 +266,7 @@ async function copyKey() {
           class="mt-4 w-full text-xs text-text-subtle transition-colors hover:text-accent"
           @click="handleRegenerate"
         >
-          Lost your API key? Regenerate with email &amp; password
+          Already signed in elsewhere? Regenerate key with email &amp; password
         </button>
       </div>
     </div>

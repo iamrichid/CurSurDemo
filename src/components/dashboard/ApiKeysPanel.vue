@@ -1,9 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuth } from '../../composables/useAuth.js'
+import { useToast } from '../../composables/useToast.js'
 import { fetchMe, rotateApiKey, DashboardApiError } from '../../services/dashboardApi.js'
 
 const { setSession, getKeyPrefix } = useAuth()
+const toast = useToast()
 
 const keyPrefix = ref(getKeyPrefix() || 'No key')
 const loading = ref(false)
@@ -30,9 +32,11 @@ async function handleRotate() {
     setSession({ api_key: data.api_key })
     newApiKey.value = data.api_key
     keyPrefix.value = data.key_prefix
+    toast.success('API key rotated — copy your new key now')
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not rotate API key.'
+    toast.error(error.value)
   } finally {
     loading.value = false
   }
@@ -40,9 +44,14 @@ async function handleRotate() {
 
 async function copyKey() {
   if (!newApiKey.value) return
-  await navigator.clipboard.writeText(newApiKey.value)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  try {
+    await navigator.clipboard.writeText(newApiKey.value)
+    copied.value = true
+    toast.success('API key copied')
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    toast.error('Could not copy key')
+  }
 }
 </script>
 

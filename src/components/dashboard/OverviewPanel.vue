@@ -1,8 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AnimatedCounter from '../shared/AnimatedCounter.vue'
 import UsageChart from '../shared/UsageChart.vue'
+import { useToast } from '../../composables/useToast.js'
 import { fetchUsage, DashboardApiError } from '../../services/dashboardApi.js'
+
+const toast = useToast()
 
 const loading = ref(true)
 const error = ref('')
@@ -57,6 +61,7 @@ onMounted(async () => {
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not load usage data.'
+    toast.error(error.value)
   } finally {
     loading.value = false
   }
@@ -99,6 +104,10 @@ onMounted(async () => {
       </div>
       <p class="mt-2 text-[10px] text-text-subtle">
         Rate limit: {{ plan.rate_limit_per_minute }} requests/min · PAYG: GH₵ {{ plan.payg_cost_per_call.toFixed(2) }}/call after free tier
+        ·
+        <RouterLink to="/dashboard/billing" class="text-accent hover:underline">Top up wallet</RouterLink>
+        ·
+        <RouterLink to="/dashboard/keys" class="text-accent hover:underline">Manage keys</RouterLink>
       </p>
     </div>
 

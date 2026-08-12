@@ -6,8 +6,10 @@ import {
   DashboardApiError,
 } from '../../services/dashboardApi.js'
 import { useAuth } from '../../composables/useAuth.js'
+import { useToast } from '../../composables/useToast.js'
 
 const { setSession, getAccount } = useAuth()
+const toast = useToast()
 
 const providers = [
   { id: 'mtn', name: 'MTN MoMo', color: 'bg-mtn', textColor: 'text-black', prefix: '024' },
@@ -47,6 +49,7 @@ async function loadWallet() {
   } catch (err) {
     loadError.value =
       err instanceof DashboardApiError ? err.message : 'Could not load wallet.'
+    toast.error(loadError.value)
   } finally {
     loading.value = false
   }
@@ -74,6 +77,7 @@ async function handleTopUp() {
     walletBalance.value = data.balance
     lastTopUpAmount.value = data.amount
     topUpSuccess.value = true
+    toast.success(`Top-up successful — GH₵ ${data.amount.toFixed(2)} added`)
     const account = getAccount()
     if (account) {
       setSession({ account: { ...account, wallet_balance: data.balance } })
@@ -82,6 +86,7 @@ async function handleTopUp() {
   } catch (err) {
     topUpError.value =
       err instanceof DashboardApiError ? err.message : 'Top-up failed.'
+    toast.error(topUpError.value)
   } finally {
     topping.value = false
   }

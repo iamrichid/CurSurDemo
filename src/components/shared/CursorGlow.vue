@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useMouse } from '@vueuse/core'
 
 const glow = ref(null)
+const enabled = ref(true)
 const { x, y } = useMouse()
 
 function onMove() {
@@ -18,7 +19,9 @@ function tick() {
 }
 
 onMounted(() => {
-  tick()
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  enabled.value = !reducedMotion
+  if (enabled.value) tick()
 })
 
 onUnmounted(() => {
@@ -28,14 +31,9 @@ onUnmounted(() => {
 
 <template>
   <div
+    v-if="enabled"
     ref="glow"
-    class="cursor-glow pointer-events-none fixed z-[9998] h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl transition-opacity duration-300"
-    aria-hidden="true"
+    class="pointer-events-none fixed z-0 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-3xl transition-opacity duration-300"
+    style="background: radial-gradient(circle, var(--color-accent-glow) 0%, transparent 70%)"
   />
 </template>
-
-<style scoped>
-.cursor-glow {
-  background: radial-gradient(circle, var(--color-accent-glow) 0%, transparent 70%);
-}
-</style>

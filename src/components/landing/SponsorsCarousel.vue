@@ -44,7 +44,10 @@ const track = [...sponsors, ...sponsors]
         :class="isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
       >
         <p class="text-xs font-semibold uppercase tracking-widest text-accent">Platform metrics</p>
-        <h2 class="mt-2 text-2xl font-bold text-text sm:text-3xl">Trusted by Ghana's logistics leaders</h2>
+        <h2 class="mt-2 text-2xl font-bold text-text sm:text-3xl">Built for Ghana's logistics ecosystem</h2>
+        <p class="mx-auto mt-2 max-w-lg text-xs text-text-subtle">
+          Example partner profiles below — illustrative integrations, not live customer endorsements.
+        </p>
       </div>
 
       <div
@@ -79,7 +82,7 @@ const track = [...sponsors, ...sponsors]
         :style="{ transitionDelay: '250ms' }"
       >
         <p class="mb-5 text-center text-xs font-medium uppercase tracking-wider text-text-subtle">
-          Powering delivery for
+          Example integrations
         </p>
 
         <div
@@ -119,7 +122,7 @@ const track = [...sponsors, ...sponsors]
               </div>
               <div class="flex items-center justify-between border-t border-border pt-3">
                 <span class="font-mono text-[10px] text-accent">{{ s.metric }}</span>
-                <span class="rounded-full bg-success/15 px-1.5 py-0.5 text-[9px] font-semibold text-success">Live</span>
+                <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-semibold text-text-subtle">Demo</span>
               </div>
             </div>
           </div>

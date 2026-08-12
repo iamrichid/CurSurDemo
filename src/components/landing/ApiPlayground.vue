@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, defineAsyncComponent } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useScrollReveal } from '../../composables/useScrollReveal'
 import { usePricing, getMockRoute } from '../../composables/usePricing'
+import { useAuth } from '../../composables/useAuth.js'
+import { useToast } from '../../composables/useToast.js'
 import { fetchQuote, isLiveApiEnabled } from '../../services/quoteApi.js'
 import { highlightJson } from '../../data/docsContent.js'
 import PlaygroundRoutePreview from './PlaygroundRoutePreview.vue'
@@ -9,6 +12,8 @@ import PlaygroundRoutePreview from './PlaygroundRoutePreview.vue'
 const ThreeLoader = defineAsyncComponent(() => import('../shared/ThreeLoader.vue'))
 
 const { calculateQuote } = usePricing()
+const { getApiKey } = useAuth()
+const toast = useToast()
 const { el: sectionEl, isVisible } = useScrollReveal()
 
 const vehicles = [
@@ -28,6 +33,17 @@ const errorMessage = ref('')
 
 const route = getMockRoute()
 const liveApi = isLiveApiEnabled()
+const hasApiKey = computed(() => Boolean(getApiKey()))
+
+const statusBadge = computed(() => {
+  if (!liveApi) {
+    return { label: 'Local mock · No auth', class: 'border-success/30 bg-success/10 text-success' }
+  }
+  if (hasApiKey.value) {
+    return { label: 'Live API · Key loaded', class: 'border-accent/30 bg-accent/10 text-accent' }
+  }
+  return { label: 'Live API · Key required', class: 'border-warning/30 bg-warning/10 text-warning' }
+})
 
 const quote = computed(() =>
   calculateQuote(activeVehicle.value, route.distanceKm, route.durationMins)
@@ -86,14 +102,25 @@ async function testEndpoint() {
       await new Promise((r) => setTimeout(r, i < 40 ? 6 : 1))
     }
     isTypingResponse.value = false
+    const price = payload?.price_ghs
+    if (typeof price === 'number') {
+      toast.success(`Quote ready — GH₵ ${price.toFixed(2)}`)
+    } else {
+      toast.success('Quote request completed')
+    }
   } catch (err) {
     clearInterval(progressInterval)
     loading.value = false
     if (err instanceof Error && 'code' in err && err.code === 'INSUFFICIENT_BALANCE') {
       errorMessage.value = `${err.message} Top up in the dashboard under Billing.`
+      toast.error('Insufficient wallet balance — top up in Billing')
+    } else if (err instanceof Error && 'status' in err && err.status === 401) {
+      errorMessage.value = 'API key required. Sign in and copy your key, or register for a free account.'
+      toast.warning('Sign in to run live quotes from the playground')
     } else {
       errorMessage.value =
         err instanceof Error ? err.message : 'Quote request failed'
+      toast.error(errorMessage.value)
     }
   }
 }
@@ -108,9 +135,14 @@ function switchVehicle(id) {
 
 async function copyResponse() {
   if (!responseText.value) return
-  await navigator.clipboard.writeText(responseText.value)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  try {
+    await navigator.clipboard.writeText(responseText.value)
+    copied.value = true
+    toast.success('Response copied')
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {
+    toast.error('Could not copy response')
+  }
 }
 </script>
 
@@ -140,11 +172,21 @@ async function copyResponse() {
           </span>
           <span
             class="rounded-lg border px-3 py-1.5 text-xs font-medium"
-            :class="liveApi ? 'border-accent/30 bg-accent/10 text-accent' : 'border-success/30 bg-success/10 text-success'"
+            :class="statusBadge.class"
           >
-            {{ liveApi ? 'Live API' : 'Sandbox · No auth required' }}
+            {{ statusBadge.label }}
           </span>
         </div>
+      </div>
+
+      <div
+        v-if="liveApi && !hasApiKey"
+        class="mb-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+      >
+        Live quotes need a Bearer token and wallet balance.
+        <RouterLink to="/dashboard/login?intent=key" class="ml-1 font-semibold underline underline-offset-2 hover:text-text">
+          Get your free API key →
+        </RouterLink>
       </div>
 
       <div
