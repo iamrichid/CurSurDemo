@@ -1,3 +1,9 @@
+export const apiEndpoints = [
+  { method: 'POST', path: '/v1/quote', desc: 'Get a pricing quote for a route' },
+  { method: 'GET', path: '/v1/health', desc: 'Check API status' },
+  { method: 'GET', path: '/v1/rates', desc: 'Retrieve your pricing matrix' },
+]
+
 export const docsNav = [
   { id: 'introduction', label: 'Introduction' },
   { id: 'authentication', label: 'Authentication' },
@@ -27,7 +33,7 @@ export const jsonResponse = `{
   "vehicle": "Motorbike (Okada)",
   "distance_km": 8.4,
   "duration_mins": 24,
-  "price_ghs": 32.50,
+  "price_ghs": 29.12,
   "currency": "GHS"
 }`
 

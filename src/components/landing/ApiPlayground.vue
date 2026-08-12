@@ -2,6 +2,8 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { useScrollReveal } from '../../composables/useScrollReveal'
 import { usePricing, getMockRoute } from '../../composables/usePricing'
+import { fetchQuote, isLiveApiEnabled } from '../../services/quoteApi.js'
+import { highlightJson } from '../../data/docsContent.js'
 import PlaygroundRoutePreview from './PlaygroundRoutePreview.vue'
 
 const ThreeLoader = defineAsyncComponent(() => import('../shared/ThreeLoader.vue'))
@@ -22,8 +24,10 @@ const showResponse = ref(false)
 const routeProgress = ref(0)
 const responseMs = ref(0)
 const copied = ref(false)
+const errorMessage = ref('')
 
 const route = getMockRoute()
+const liveApi = isLiveApiEnabled()
 
 const quote = computed(() =>
   calculateQuote(activeVehicle.value, route.distanceKm, route.durationMins)
@@ -41,29 +45,8 @@ const requestJson = computed(() =>
   )
 )
 
-const fullResponse = computed(() =>
-  JSON.stringify(
-    {
-      status: 'success',
-      route: {
-        origin: route.origin.name,
-        destination: route.destination.name,
-      },
-      ...quote.value,
-    },
-    null,
-    2
-  )
-)
-
-function highlightJson(json) {
-  return json
-    .replace(/"([^"]+)":/g, '<span class="text-sky-400">"$1"</span>:')
-    .replace(/: "([^"]+)"/g, ': <span class="text-emerald-400">"$1"</span>')
-    .replace(/: (\d+\.?\d*)/g, ': <span class="text-amber-400">$1</span>')
-}
-
 const highlightedResponse = computed(() => highlightJson(responseText.value))
+const isTypingResponse = ref(false)
 
 async function testEndpoint() {
   loading.value = true
@@ -71,6 +54,7 @@ async function testEndpoint() {
   responseText.value = ''
   routeProgress.value = 0
   copied.value = false
+  errorMessage.value = ''
 
   const start = performance.now()
 
@@ -78,19 +62,35 @@ async function testEndpoint() {
     routeProgress.value = Math.min(routeProgress.value + 0.04, 0.95)
   }, 50)
 
-  await new Promise((r) => setTimeout(r, 1400))
+  try {
+    const [payload] = await Promise.all([
+      fetchQuote({
+        origin: { lat: route.origin.lat, lng: route.origin.lng },
+        destination: { lat: route.destination.lat, lng: route.destination.lng },
+        vehicle: activeVehicle.value,
+      }),
+      new Promise((resolve) => setTimeout(resolve, liveApi ? 0 : 1200)),
+    ])
 
-  clearInterval(progressInterval)
-  routeProgress.value = 1
-  responseMs.value = Math.round(performance.now() - start)
+    clearInterval(progressInterval)
+    routeProgress.value = 1
+    responseMs.value = Math.round(performance.now() - start)
 
-  loading.value = false
-  showResponse.value = true
+    loading.value = false
+    showResponse.value = true
 
-  const text = fullResponse.value
-  for (let i = 0; i <= text.length; i++) {
-    responseText.value = text.slice(0, i)
-    await new Promise((r) => setTimeout(r, i < 40 ? 6 : 1))
+    const text = JSON.stringify(payload, null, 2)
+    isTypingResponse.value = true
+    for (let i = 0; i <= text.length; i++) {
+      responseText.value = text.slice(0, i)
+      await new Promise((r) => setTimeout(r, i < 40 ? 6 : 1))
+    }
+    isTypingResponse.value = false
+  } catch (err) {
+    clearInterval(progressInterval)
+    loading.value = false
+    errorMessage.value =
+      err instanceof Error ? err.message : 'Quote request failed'
   }
 }
 
@@ -99,6 +99,7 @@ function switchVehicle(id) {
   showResponse.value = false
   responseText.value = ''
   routeProgress.value = 0
+  errorMessage.value = ''
 }
 
 async function copyResponse() {
@@ -133,8 +134,11 @@ async function copyResponse() {
           <span class="rounded-lg border border-border bg-surface-card px-3 py-1.5 font-mono text-xs text-text-muted">
             api.any3mi.com
           </span>
-          <span class="rounded-lg border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
-            Sandbox · No auth required
+          <span
+            class="rounded-lg border px-3 py-1.5 text-xs font-medium"
+            :class="liveApi ? 'border-accent/30 bg-accent/10 text-accent' : 'border-success/30 bg-success/10 text-success'"
+          >
+            {{ liveApi ? 'Live API' : 'Sandbox · No auth required' }}
           </span>
         </div>
       </div>
@@ -205,6 +209,10 @@ async function copyResponse() {
 
             <pre class="mb-5 overflow-x-auto rounded-xl border border-border bg-[#0a0a0c] p-4 font-mono text-[11px] leading-relaxed text-text-muted sm:text-xs"><code>{{ requestJson }}</code></pre>
 
+            <p v-if="errorMessage" class="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
+              {{ errorMessage }}
+            </p>
+
             <button
               type="button"
               v-motion
@@ -269,7 +277,7 @@ async function copyResponse() {
 
             <div class="flex flex-1 flex-col p-5">
               <!-- Empty -->
-              <div v-if="!loading && !showResponse" class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+              <div v-if="!loading && !showResponse && !errorMessage" class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
                 <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-surface-card">
                   <svg class="h-8 w-8 text-text-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -325,7 +333,7 @@ async function copyResponse() {
                   </div>
                   <pre
                     class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-border/50 bg-surface/50 p-4 font-mono text-[11px] leading-relaxed sm:text-xs"
-                    v-html="highlightedResponse + (responseText.length < fullResponse.length ? '<span class=&quot;animate-pulse text-accent&quot;>▊</span>' : '')"
+                    v-html="highlightedResponse + (isTypingResponse ? '<span class=&quot;animate-pulse text-accent&quot;>▊</span>' : '')"
                   />
                 </div>
               </Transition>

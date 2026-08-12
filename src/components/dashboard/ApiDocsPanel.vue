@@ -1,38 +1,10 @@
 <script setup>
-const curlExample = `curl -X POST https://api.any3mi.com/v1/quote \\
-  -H "Authorization: Bearer a3_live_sk_abc123" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "origin": { "lat": 5.638, "lng": -0.154 },
-    "destination": { "lat": 5.571, "lng": -0.214 },
-    "vehicle": "motorbike"
-  }'`
-
-const jsonResponse = `{
-  "status": "success",
-  "route": {
-    "origin": "East Legon",
-    "destination": "Circle, Accra"
-  },
-  "vehicle": "Motorbike (Okada)",
-  "distance_km": 8.4,
-  "duration_mins": 24,
-  "price_ghs": 32.50,
-  "currency": "GHS"
-}`
-
-const endpoints = [
-  { method: 'POST', path: '/v1/quote', desc: 'Get a pricing quote for a route' },
-  { method: 'GET', path: '/v1/health', desc: 'Check API status' },
-  { method: 'GET', path: '/v1/rates', desc: 'Retrieve your pricing matrix' },
-]
-
-function highlightJson(json) {
-  return json
-    .replace(/"([^"]+)":/g, '<span class="text-sky-400">"$1"</span>:')
-    .replace(/: "([^"]+)"/g, ': <span class="text-emerald-400">"$1"</span>')
-    .replace(/: (\d+\.?\d*)/g, ': <span class="text-amber-400">$1</span>')
-}
+import {
+  apiEndpoints,
+  curlExample,
+  jsonResponse,
+  highlightJson,
+} from '../../data/docsContent.js'
 </script>
 
 <template>
@@ -48,7 +20,7 @@ function highlightJson(json) {
 
     <div class="mb-6 grid gap-3 sm:grid-cols-3">
       <div
-        v-for="(ep, i) in endpoints"
+        v-for="(ep, i) in apiEndpoints"
         :key="ep.path"
         class="ft-card p-4"
         v-motion

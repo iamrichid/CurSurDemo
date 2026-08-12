@@ -1,0 +1,10 @@
+name = "any3mi-api"
+main = "src/index.js"
+compatibility_date = "2025-08-01"
+
+# Set secrets via: wrangler secret put ORS_API_KEY
+# Optional: wrangler secret put ANY3MI_API_KEYS  (comma-separated bearer tokens)
+
+[vars]
+# Comma-separated origins allowed for CORS (use * for local dev only)
+ALLOWED_ORIGINS = "http://localhost:5173,https://cur-sur-demo.vercel.app,https://any3mi.pages.dev"
