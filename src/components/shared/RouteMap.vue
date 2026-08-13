@@ -68,7 +68,9 @@ function renderRoute() {
   const destination = props.destination
   if (!origin || !destination) return
 
-  const line = props.geometry ? toLatLngRing(props.geometry) : fallbackLine(origin, destination)
+  const line = props.geometry?.coordinates?.length >= 2
+    ? toLatLngRing(props.geometry)
+    : fallbackLine(origin, destination)
   if (line.length >= 2) {
     routeLayer = L.polyline(line, {
       color: '#6366f1',
