@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { defaultRates } from '../utils/pricing.js'
+import { defaultRates, normalizeRates } from '../utils/pricing.js'
 import { fetchRates, saveRates } from '../services/dashboardApi.js'
 
 const CACHE_KEY = 'any3mi-rates-cache'
@@ -17,18 +17,23 @@ function readCache() {
     const raw = sessionStorage.getItem(CACHE_KEY)
     const ts = Number(sessionStorage.getItem(CACHE_TS_KEY) || 0)
     if (!raw || Date.now() - ts > TTL_MS) return null
-    return JSON.parse(raw)
+    return normalizeRates(JSON.parse(raw))
   } catch {
+    sessionStorage.removeItem(CACHE_KEY)
+    sessionStorage.removeItem(CACHE_TS_KEY)
     return null
   }
 }
 
 function writeCache(rates) {
   try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(rates))
+    const normalized = normalizeRates(rates)
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(normalized))
     sessionStorage.setItem(CACHE_TS_KEY, String(Date.now()))
+    return normalized
   } catch {
     // storage full or unavailable
+    return normalizeRates(rates)
   }
 }
 
@@ -42,11 +47,14 @@ export function invalidateRatesCache() {
 export function useRates() {
   function getInitialRates() {
     const source = sharedRates.value || readCache() || defaultRates
-    return structuredClone(source)
+    return normalizeRates(source)
   }
 
   async function load({ background = false } = {}) {
-    if (inflight) return inflight
+    if (inflight) {
+      syncing.value = true
+      return inflight
+    }
 
     const cached = readCache()
     if (cached && !sharedRates.value) {
@@ -60,10 +68,16 @@ export function useRates() {
     inflight = (async () => {
       try {
         const data = await fetchRates()
-        sharedRates.value = data.rates
-        writeCache(data.rates)
+        const normalized = normalizeRates(data?.rates)
+        sharedRates.value = normalized
+        writeCache(normalized)
         loadedOnce.value = true
-        return data.rates
+        return normalized
+      } catch (err) {
+        if (!sharedRates.value && !readCache()) {
+          sharedRates.value = normalizeRates(defaultRates)
+        }
+        throw err
       } finally {
         loading.value = false
         syncing.value = false
@@ -75,9 +89,10 @@ export function useRates() {
   }
 
   async function persist(rates) {
-    const data = await saveRates(rates)
-    sharedRates.value = structuredClone(rates)
-    writeCache(sharedRates.value)
+    const normalized = normalizeRates(rates)
+    const data = await saveRates(normalized)
+    sharedRates.value = structuredClone(normalized)
+    writeCache(normalized)
     return data
   }
 

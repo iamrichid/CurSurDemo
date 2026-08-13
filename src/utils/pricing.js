@@ -6,6 +6,21 @@ export const defaultRates = {
 
 export const vehicleTypes = ['bicycle', 'motorbike', 'car']
 
+export function normalizeRates(rates) {
+  const merged = structuredClone(defaultRates)
+  if (!rates || typeof rates !== 'object') return merged
+  for (const vehicle of vehicleTypes) {
+    const row = rates[vehicle]
+    if (!row || typeof row !== 'object') continue
+    merged[vehicle] = {
+      ...merged[vehicle],
+      ...row,
+      label: row.label || merged[vehicle].label,
+    }
+  }
+  return merged
+}
+
 export function calculateQuote(rates, vehicle, distanceKm, durationMins) {
   const rate = rates[vehicle]
   if (!rate) return null

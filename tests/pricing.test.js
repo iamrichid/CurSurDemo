@@ -4,6 +4,7 @@ import {
   calculateQuote,
   defaultRates,
   getMockRoute,
+  normalizeRates,
 } from '../src/utils/pricing.js'
 
 describe('calculateQuote', () => {
@@ -67,5 +68,19 @@ describe('getMockRoute', () => {
     expect(route.origin.lat).toBeCloseTo(5.638)
     expect(route.destination.lng).toBeCloseTo(-0.214)
     expect(route.distanceKm).toBe(8.4)
+  })
+})
+
+describe('normalizeRates', () => {
+  it('fills missing vehicles from defaults', () => {
+    const normalized = normalizeRates({ motorbike: { baseFare: 10, perKm: 2, perMinute: 0.3 } })
+    expect(normalized.bicycle.label).toBe('Bicycle')
+    expect(normalized.motorbike.baseFare).toBe(10)
+    expect(normalized.car.perKm).toBe(defaultRates.car.perKm)
+  })
+
+  it('returns defaults for empty input', () => {
+    expect(normalizeRates(null)).toEqual(defaultRates)
+    expect(normalizeRates({})).toEqual(defaultRates)
   })
 })

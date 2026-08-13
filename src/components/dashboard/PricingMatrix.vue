@@ -1,6 +1,6 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { defaultRates, vehicleTypes } from '../../utils/pricing.js'
+import { ref, reactive, onMounted, onActivated } from 'vue'
+import { defaultRates, vehicleTypes, normalizeRates } from '../../utils/pricing.js'
 import { DashboardApiError } from '../../services/dashboardApi.js'
 import { useRates } from '../../composables/useRates.js'
 import { useToast } from '../../composables/useToast.js'
@@ -13,22 +13,34 @@ const rates = reactive(ratesStore.getInitialRates())
 const error = ref('')
 const saveMessage = ref('')
 const saving = ref(false)
+const ready = ref(true)
 const pulsingFields = ref(new Set())
 
 let saveTimer = null
 let hydrating = true
 
+function applyRates(next) {
+  const normalized = normalizeRates(next)
+  for (const key of Object.keys(rates)) {
+    if (!(key in normalized)) delete rates[key]
+  }
+  Object.assign(rates, normalized)
+}
+
 async function refreshRates() {
   error.value = ''
+  hydrating = true
   try {
     const fresh = await load({ background: true })
-    Object.assign(rates, structuredClone(fresh))
+    applyRates(fresh)
   } catch (err) {
     error.value =
       err instanceof DashboardApiError ? err.message : 'Could not load pricing matrix.'
+    applyRates(ratesStore.getInitialRates())
     toast.error(error.value)
   } finally {
     hydrating = false
+    ready.value = true
   }
 }
 
@@ -69,12 +81,23 @@ function isPulsing(vehicle, field) {
 }
 
 async function resetRates() {
-  Object.assign(rates, structuredClone(defaultRates))
+  applyRates(defaultRates)
   scheduleSave()
   toast.info('Reset to default rates')
 }
 
+function samplePrice(vehicle) {
+  const row = rates[vehicle]
+  if (!row) return '0.00'
+  const total =
+    Number(row.baseFare || 0) +
+    8.4 * Number(row.perKm || 0) +
+    24 * Number(row.perMinute || 0)
+  return Number.isFinite(total) ? total.toFixed(2) : '0.00'
+}
+
 onMounted(refreshRates)
+onActivated(refreshRates)
 
 const vehicleAbbr = { bicycle: 'Bi', motorbike: 'Mo', car: 'Ca' }
 
@@ -112,7 +135,7 @@ const fieldLabels = {
       {{ error }}
     </p>
 
-    <div class="space-y-6">
+    <div v-if="ready" class="space-y-6">
       <div
         v-for="vehicle in vehicleTypes"
         :key="vehicle"
@@ -122,10 +145,10 @@ const fieldLabels = {
           <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted text-[10px] font-bold uppercase text-accent">
             {{ vehicleAbbr[vehicle] }}
           </span>
-          {{ rates[vehicle].label }}
+          {{ rates[vehicle]?.label || vehicle }}
         </h2>
 
-        <div class="grid gap-4 sm:grid-cols-3">
+        <div v-if="rates[vehicle]" class="grid gap-4 sm:grid-cols-3">
           <div
             v-for="field in ['baseFare', 'perKm', 'perMinute']"
             :key="field"
@@ -148,13 +171,7 @@ const fieldLabels = {
         <div class="mt-4 rounded-lg bg-surface-muted px-4 py-3 font-mono text-xs text-text-muted">
           Sample quote (8.4 km, 24 min):
           <span class="ml-1 font-semibold text-accent">
-            GH₵ {{
-              (
-                rates[vehicle].baseFare +
-                8.4 * rates[vehicle].perKm +
-                24 * rates[vehicle].perMinute
-              ).toFixed(2)
-            }}
+            GH₵ {{ samplePrice(vehicle) }}
           </span>
         </div>
       </div>
