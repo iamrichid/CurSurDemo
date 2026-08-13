@@ -38,6 +38,54 @@ async function handleHealth(request, env) {
   )
 }
 
+function handleRoot(request, env) {
+  const headers = corsHeaders(request, env)
+  const appUrl = (env.APP_URL || 'https://cur-sur-demo.vercel.app').replace(/\/$/, '')
+  const accept = request.headers.get('Accept') || ''
+  const wantsHtml =
+    accept.includes('text/html') && !accept.includes('application/json')
+
+  if (wantsHtml) {
+    const location = `${appUrl}/`
+    if (request.method === 'HEAD') {
+      return new Response(null, {
+        status: 302,
+        headers: { ...headers, Location: location },
+      })
+    }
+    return Response.redirect(location, 302)
+  }
+
+  if (request.method === 'HEAD') {
+    return new Response(null, {
+      status: 200,
+      headers: { ...headers, 'Content-Type': 'application/json; charset=utf-8' },
+    })
+  }
+
+  return json(
+    {
+      status: 'ok',
+      service: 'any3mi-api',
+      version: '5.0.0',
+      message: 'ANY3MI routing & pricing API for Ghanaian logistics.',
+      docs: `${appUrl}/docs`,
+      dashboard: `${appUrl}/dashboard`,
+      health: '/v1/health',
+      quote: 'POST /v1/quote',
+      endpoints: [
+        { method: 'GET', path: '/v1/health', desc: 'Service status' },
+        { method: 'POST', path: '/v1/quote', desc: 'Route + GHS price quote (addresses or coordinates)' },
+        { method: 'POST', path: '/v1/auth/register', desc: 'Create account + API key' },
+        { method: 'GET', path: '/v1/me', desc: 'Account info (Bearer token)' },
+        { method: 'GET', path: '/v1/wallet', desc: 'Wallet balance (Bearer token)' },
+      ],
+    },
+    200,
+    headers
+  )
+}
+
 async function handleQuote(request, env) {
   const headers = corsHeaders(request, env)
   const started = Date.now()
@@ -215,7 +263,26 @@ export default {
       const { handleGetWallet, handleTopUp } = await import('./handlers/wallet.js')
       const { handleGetPlan, handleRotateKey } = await import('./handlers/plan.js')
 
-      if (request.method === 'GET' && url.pathname === '/v1/health') {
+      const isRoot =
+        url.pathname === '/' || url.pathname === '/v1' || url.pathname === ''
+
+      if ((request.method === 'GET' || request.method === 'HEAD') && isRoot) {
+        return handleRoot(request, env)
+      }
+
+      if (
+        (request.method === 'GET' || request.method === 'HEAD') &&
+        url.pathname === '/v1/health'
+      ) {
+        if (request.method === 'HEAD') {
+          return new Response(null, {
+            status: 200,
+            headers: {
+              ...headers,
+              'Content-Type': 'application/json; charset=utf-8',
+            },
+          })
+        }
         return handleHealth(request, env)
       }
 
