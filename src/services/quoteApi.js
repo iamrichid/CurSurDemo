@@ -25,7 +25,10 @@ export function isLiveApiEnabled() {
 /**
  * POST /v1/quote — uses VITE_ANY3MI_API_URL when set, otherwise local mock.
  */
-export async function fetchQuote({ origin, destination, vehicle }) {
+export async function fetchQuote(
+  { origin, destination, vehicle },
+  { includeGeometry = false } = {}
+) {
   const baseUrl = getApiBaseUrl()
 
   if (baseUrl) {
@@ -37,7 +40,8 @@ export async function fetchQuote({ origin, destination, vehicle }) {
     const headers = { 'Content-Type': 'application/json' }
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`
 
-    const response = await fetch(`${baseUrl}/v1/quote`, {
+    const query = includeGeometry ? '?include_geometry=1' : ''
+    const response = await fetch(`${baseUrl}/v1/quote${query}`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ origin, destination, vehicle }),
@@ -66,6 +70,7 @@ export async function fetchQuote({ origin, destination, vehicle }) {
   const payload = buildQuoteResponse(defaultRates, vehicle, route, {
     originInput: origin,
     destinationInput: destination,
+    includeGeometry,
   })
   if (!payload) {
     throw new QuoteApiError(422, 'Unsupported vehicle type')

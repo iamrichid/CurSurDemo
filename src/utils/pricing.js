@@ -56,6 +56,18 @@ export function getMockRoute() {
   }
 }
 
+export function buildMockRouteGeometry(origin, destination, segments = 12) {
+  const coords = []
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments
+    coords.push([
+      origin.lng + (destination.lng - origin.lng) * t,
+      origin.lat + (destination.lat - origin.lat) * t,
+    ])
+  }
+  return { type: 'LineString', coordinates: coords }
+}
+
 function routePointFromInput(input, fallback) {
   if (typeof input === 'string' && input.trim()) {
     return { ...fallback, address: input.trim(), name: input.trim() }
@@ -80,7 +92,12 @@ function routePointFromInput(input, fallback) {
   return fallback
 }
 
-export function buildQuoteResponse(rates, vehicle, route, { originInput, destinationInput } = {}) {
+export function buildQuoteResponse(
+  rates,
+  vehicle,
+  route,
+  { originInput, destinationInput, includeGeometry = false } = {}
+) {
   const quote = calculateQuote(
     rates,
     vehicle,
@@ -92,22 +109,28 @@ export function buildQuoteResponse(rates, vehicle, route, { originInput, destina
   const origin = routePointFromInput(originInput, route.origin)
   const destination = routePointFromInput(destinationInput, route.destination)
 
+  const routePayload = {
+    origin: {
+      label: origin.name,
+      lat: origin.lat,
+      lng: origin.lng,
+      ...(origin.address ? { address: origin.address } : {}),
+    },
+    destination: {
+      label: destination.name,
+      lat: destination.lat,
+      lng: destination.lng,
+      ...(destination.address ? { address: destination.address } : {}),
+    },
+  }
+
+  if (includeGeometry) {
+    routePayload.geometry = buildMockRouteGeometry(origin, destination)
+  }
+
   return {
     status: 'success',
-    route: {
-      origin: {
-        label: origin.name,
-        lat: origin.lat,
-        lng: origin.lng,
-        ...(origin.address ? { address: origin.address } : {}),
-      },
-      destination: {
-        label: destination.name,
-        lat: destination.lat,
-        lng: destination.lng,
-        ...(destination.address ? { address: destination.address } : {}),
-      },
-    },
+    route: routePayload,
     ...quote,
   }
 }

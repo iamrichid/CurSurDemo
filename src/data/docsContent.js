@@ -39,6 +39,10 @@ export const jsonResponse = `{
       "address": "Kwame Nkrumah Circle, Accra",
       "lat": 5.571,
       "lng": -0.214
+    },
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [[-0.154, 5.638], [-0.214, 5.571]]
     }
   },
   "vehicle": "Motorbike (Okada)",
@@ -62,6 +66,12 @@ export const requestParams = [
     desc: 'Drop-off: same formats as origin. Addresses are geocoded to Ghana coordinates server-side.',
   },
   { name: 'vehicle', type: 'string', required: true, desc: 'One of: bicycle, motorbike, car' },
+  {
+    name: 'include_geometry',
+    type: 'query',
+    required: false,
+    desc: 'Pass ?include_geometry=1 to add a GeoJSON LineString under route.geometry (ORS road path)',
+  },
 ]
 
 export const locationExamples = [

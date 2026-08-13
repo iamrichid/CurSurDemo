@@ -87,6 +87,7 @@ function handleRoot(request, env) {
 }
 
 async function handleQuote(request, env) {
+  const url = new URL(request.url)
   const headers = corsHeaders(request, env)
   const started = Date.now()
 
@@ -138,13 +139,18 @@ async function handleQuote(request, env) {
     }
   }
 
+  const includeGeometry =
+    url.searchParams.get('include_geometry') === '1' ||
+    url.searchParams.get('include_geometry') === 'true'
+
   let metrics
   try {
     metrics = await fetchRouteMetrics(
       env,
       resolved.origin,
       resolved.destination,
-      vehicle
+      vehicle,
+      { includeGeometry }
     )
   } catch (err) {
     if (err instanceof RoutingError) {
@@ -231,13 +237,18 @@ async function handleQuote(request, env) {
     })
   }
 
+  const routePayload = {
+    origin: formatRoutePoint(resolved.origin),
+    destination: formatRoutePoint(resolved.destination),
+  }
+  if (includeGeometry && metrics.geometry) {
+    routePayload.geometry = metrics.geometry
+  }
+
   return json(
     {
       status: 'success',
-      route: {
-        origin: formatRoutePoint(resolved.origin),
-        destination: formatRoutePoint(resolved.destination),
-      },
+      route: routePayload,
       billing: billed
         ? { mode: 'payg', cost_ghs: COST_PER_CALL }
         : { mode: 'free_tier', cost_ghs: 0 },

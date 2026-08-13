@@ -5,6 +5,7 @@ import {
   defaultRates,
   getMockRoute,
   normalizeRates,
+  buildMockRouteGeometry,
 } from '../src/utils/pricing.js'
 
 describe('calculateQuote', () => {
@@ -60,6 +61,15 @@ describe('buildQuoteResponse', () => {
     })
     expect(response.price_ghs).toBeGreaterThan(0)
   })
+
+  it('includes mock geometry when requested', () => {
+    const route = getMockRoute()
+    const response = buildQuoteResponse(defaultRates, 'motorbike', route, {
+      includeGeometry: true,
+    })
+    expect(response.route.geometry?.type).toBe('LineString')
+    expect(response.route.geometry.coordinates.length).toBeGreaterThan(2)
+  })
 })
 
 describe('getMockRoute', () => {
@@ -82,5 +92,15 @@ describe('normalizeRates', () => {
   it('returns defaults for empty input', () => {
     expect(normalizeRates(null)).toEqual(defaultRates)
     expect(normalizeRates({})).toEqual(defaultRates)
+  })
+})
+
+describe('buildMockRouteGeometry', () => {
+  it('interpolates coordinates between origin and destination', () => {
+    const route = getMockRoute()
+    const geometry = buildMockRouteGeometry(route.origin, route.destination, 2)
+    expect(geometry.type).toBe('LineString')
+    expect(geometry.coordinates[0]).toEqual([route.origin.lng, route.origin.lat])
+    expect(geometry.coordinates.at(-1)).toEqual([route.destination.lng, route.destination.lat])
   })
 })

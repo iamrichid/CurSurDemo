@@ -7,8 +7,8 @@ import { useAuth } from '../../composables/useAuth.js'
 import { useToast } from '../../composables/useToast.js'
 import { fetchQuote, isLiveApiEnabled } from '../../services/quoteApi.js'
 import { highlightJson } from '../../data/docsContent.js'
-import PlaygroundRoutePreview from './PlaygroundRoutePreview.vue'
 
+const RouteMap = defineAsyncComponent(() => import('../shared/RouteMap.vue'))
 const ThreeLoader = defineAsyncComponent(() => import('../shared/ThreeLoader.vue'))
 
 const { calculateQuote } = usePricing()
@@ -68,6 +68,16 @@ const requestJson = computed(() =>
 const highlightedResponse = computed(() => highlightJson(responseText.value))
 const isTypingResponse = ref(false)
 
+const mapRoute = computed(() => {
+  const routeData = lastQuote.value?.route
+  if (!routeData?.origin || !routeData?.destination) return null
+  return {
+    origin: routeData.origin,
+    destination: routeData.destination,
+    geometry: routeData.geometry ?? null,
+  }
+})
+
 async function testEndpoint() {
   loading.value = true
   showResponse.value = false
@@ -84,11 +94,14 @@ async function testEndpoint() {
 
   try {
     const [payload] = await Promise.all([
-      fetchQuote({
-        origin: { address: pickupAddress.value.trim() },
-        destination: { address: dropoffAddress.value.trim() },
-        vehicle: activeVehicle.value,
-      }),
+      fetchQuote(
+        {
+          origin: { address: pickupAddress.value.trim() },
+          destination: { address: dropoffAddress.value.trim() },
+          vehicle: activeVehicle.value,
+        },
+        { includeGeometry: true }
+      ),
       new Promise((resolve) => setTimeout(resolve, liveApi ? 0 : 1200)),
     ])
 
@@ -310,23 +323,47 @@ async function copyResponse() {
             </button>
           </div>
 
-          <!-- Route preview (center column on lg) -->
-          <div class="hidden flex-col items-center justify-center border-b border-border bg-surface-muted/30 p-6 lg:col-span-2 lg:flex lg:border-b-0 lg:border-r">
-            <p class="mb-4 text-center text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Route preview</p>
-            <PlaygroundRoutePreview
-              :loading="loading"
-              :active="showResponse"
-              :progress="routeProgress"
+          <!-- Route map (center column on lg) -->
+          <div class="hidden flex-col border-b border-border bg-surface-muted/30 p-4 lg:col-span-3 lg:flex lg:border-b-0 lg:border-r">
+            <p class="mb-3 text-center text-[10px] font-semibold uppercase tracking-wider text-text-subtle">
+              Route map
+            </p>
+            <RouteMap
+              v-if="mapRoute"
+              :origin="mapRoute.origin"
+              :destination="mapRoute.destination"
+              :geometry="mapRoute.geometry"
             />
+            <div
+              v-else-if="loading"
+              class="flex h-[220px] items-center justify-center rounded-xl border border-border bg-surface-muted sm:h-[260px]"
+            >
+              <span class="text-[10px] font-medium text-text-subtle">Calculating route…</span>
+            </div>
+            <div
+              v-else
+              class="flex h-[220px] items-center justify-center rounded-xl border border-dashed border-border bg-surface-muted/50 px-4 text-center sm:h-[260px]"
+            >
+              <p class="text-[10px] text-text-subtle">Run a quote to preview the road route on OpenStreetMap</p>
+            </div>
             <Transition name="tab-content">
-              <p v-if="showResponse && previewQuote" class="mt-4 text-center font-mono text-lg font-bold text-accent">
+              <p v-if="showResponse && previewQuote" class="mt-3 text-center font-mono text-lg font-bold text-accent">
                 GH₵ {{ previewQuote.price_ghs.toFixed(2) }}
               </p>
             </Transition>
+            <a
+              v-if="mapRoute"
+              :href="`https://maps.openrouteservice.org/#/directions/${mapRoute.origin.lat},${mapRoute.origin.lng}/${mapRoute.destination.lat},${mapRoute.destination.lng}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-3 text-center text-[10px] font-medium text-accent hover:underline"
+            >
+              View on ORS Maps ↗
+            </a>
           </div>
 
           <!-- Response -->
-          <div class="relative flex min-h-[360px] flex-col code-panel lg:col-span-5">
+          <div class="relative flex min-h-[360px] flex-col code-panel lg:col-span-4">
             <div class="flex items-center justify-between border-b border-border/50 px-5 py-3">
               <div class="flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-danger/80" />
@@ -364,7 +401,12 @@ async function copyResponse() {
                   <p class="mt-1 text-xs text-text-subtle">Select a vehicle and hit Run Quote Request</p>
                 </div>
                 <div class="lg:hidden">
-                  <PlaygroundRoutePreview :loading="false" :active="false" :progress="0" />
+                  <RouteMap
+                    v-if="mapRoute"
+                    :origin="mapRoute.origin"
+                    :destination="mapRoute.destination"
+                    :geometry="mapRoute.geometry"
+                  />
                 </div>
               </div>
 
@@ -382,9 +424,8 @@ async function copyResponse() {
                       :style="{ width: `${routeProgress * 100}%` }"
                     />
                   </div>
-                  <p class="text-center text-[10px] text-text-subtle">Routing via OpenStreetMap…</p>
+                  <p class="text-center text-[10px] text-text-subtle">Geocoding &amp; routing via OpenRouteService…</p>
                 </div>
-                <PlaygroundRoutePreview class="lg:hidden" :loading="loading" :active="false" :progress="routeProgress" />
               </div>
 
               <!-- Success -->
@@ -407,6 +448,13 @@ async function copyResponse() {
                       <span>{{ previewQuote.vehicle }}</span>
                     </div>
                   </div>
+                  <RouteMap
+                    v-if="mapRoute"
+                    class="lg:hidden"
+                    :origin="mapRoute.origin"
+                    :destination="mapRoute.destination"
+                    :geometry="mapRoute.geometry"
+                  />
                   <pre
                     class="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-border/50 bg-surface/50 p-4 font-mono text-[11px] leading-relaxed sm:text-xs"
                     v-html="highlightedResponse + (isTypingResponse ? '<span class=&quot;animate-pulse text-accent&quot;>▊</span>' : '')"
