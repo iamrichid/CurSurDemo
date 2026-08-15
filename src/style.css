@@ -567,3 +567,11 @@
 .game-theme .animate-ping {
   animation: game-pulse 1.5s ease-in-out infinite;
 }
+
+/* Crawlers and headless browsers: keep interactive UI content visible
+   even when motion / scroll-reveal would otherwise start at opacity 0. */
+html[data-crawler] [style*='opacity: 0'],
+html[data-crawler] .opacity-0 {
+  opacity: 1 !important;
+  transform: none !important;
+}

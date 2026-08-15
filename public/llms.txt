@@ -1,0 +1,43 @@
+# ANY3MI
+
+> The Routing & Pricing API for Ghanaian Logistics.
+
+ANY3MI is a REST API by Usammi TECH DEPT, extracted from Night Market food delivery infrastructure. Send pickup and drop-off addresses or coordinates plus a vehicle type; get road distance, ETA, and a GH₵ price.
+
+- Site (interactive UI): https://cur-sur-demo.vercel.app/
+- Playground: https://cur-sur-demo.vercel.app/#playground
+- Docs: https://cur-sur-demo.vercel.app/docs
+- Get API key: https://cur-sur-demo.vercel.app/dashboard/login?intent=key
+
+## Interactive playground
+
+The public landing page includes a live quote playground. Example trip: East Legon, Accra → Kwame Nkrumah Circle, Accra on a motorbike (okada). Typical sample: GH₵ 29.12, 8.4 km, 24 min.
+
+## How it works
+
+1. Get an API key (no credit card to start).
+2. POST pickup and drop-off as addresses or lat/lng.
+3. Receive distance, duration, and dynamic GH₵ pricing.
+
+## Pricing
+
+- Free tier: GH₵ 0 forever, 500 API calls / month, Accra metro, all vehicle types.
+- Pay-as-you-go: GH₵ 0.10 per API call after the free tier, nationwide, custom pricing matrix, MoMo wallet billing.
+
+## API
+
+- `POST /v1/quote` — Route + GHS price quote (addresses or coordinates). Optional `?include_geometry=1`.
+- `GET /v1/health` — Service status.
+- `GET /v1/rates` — Pricing matrix (authenticated).
+- Vehicles: `bicycle`, `motorbike` (okada), `car`.
+
+```bash
+curl -X POST https://api.any3mi.com/v1/quote \
+  -H "Authorization: Bearer a3_live_sk_abc123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origin": { "address": "East Legon, Accra" },
+    "destination": { "address": "Kwame Nkrumah Circle, Accra" },
+    "vehicle": "motorbike"
+  }'
+```

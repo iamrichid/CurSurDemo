@@ -10,6 +10,11 @@ export const brand = {
   },
 }
 
+export const pageTitle = 'ANY3MI — Routing & Pricing API'
+
+export const pageDescription =
+  'ANY3MI — Routing & pricing API by Usammi TECH DEPT. Built from Night Market food delivery infrastructure for Ghanaian logistics.'
+
 export const heroSubcopy =
   'Send pickup and drop-off addresses or coordinates, get road distance, live ETAs, and dynamic pricing in Ghana Cedis — for bicycles, okada, and cars. Built by Usammi TECH DEPT from the Night Market delivery platform.'
 

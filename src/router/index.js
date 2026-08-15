@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getStoredApiKey } from '../composables/useAuth.js'
+import DocsView from '../views/DocsView.vue'
+import LandingView from '../views/LandingView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,12 +14,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'landing',
-      component: () => import('../views/LandingView.vue'),
+      component: LandingView,
     },
     {
       path: '/docs',
       name: 'docs',
-      component: () => import('../views/DocsView.vue'),
+      component: DocsView,
     },
     {
       path: '/dashboard/login',

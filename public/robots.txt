@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Allow: /docs
+Disallow: /dashboard/
+
+Sitemap: https://cur-sur-demo.vercel.app/sitemap.xml

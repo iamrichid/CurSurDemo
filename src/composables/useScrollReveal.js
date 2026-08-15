@@ -1,27 +1,55 @@
 import { ref, onMounted, onUnmounted } from 'vue'
+import { isCrawlerClient } from '../utils/crawler.js'
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+function shouldRevealImmediately() {
+  return (
+    isCrawlerClient() ||
+    prefersReducedMotion() ||
+    typeof IntersectionObserver === 'undefined'
+  )
+}
 
 export function useScrollReveal(options = {}) {
   const el = ref(null)
-  const isVisible = ref(false)
+  const isVisible = ref(shouldRevealImmediately())
   const { threshold = 0.15, rootMargin = '0px 0px -40px 0px' } = options
 
   let observer = null
+  let fallbackTimer = null
 
   onMounted(() => {
-    if (!el.value) return
+    if (isVisible.value || !el.value) return
+
     observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           isVisible.value = true
           observer?.disconnect()
+          if (fallbackTimer) clearTimeout(fallbackTimer)
         }
       },
       { threshold, rootMargin }
     )
     observer.observe(el.value)
+
+    // Crawlers and headless browsers often never scroll; reveal anyway.
+    fallbackTimer = setTimeout(() => {
+      isVisible.value = true
+      observer?.disconnect()
+    }, 1200)
   })
 
-  onUnmounted(() => observer?.disconnect())
+  onUnmounted(() => {
+    observer?.disconnect()
+    if (fallbackTimer) clearTimeout(fallbackTimer)
+  })
 
   return { el, isVisible }
 }

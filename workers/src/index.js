@@ -4,8 +4,13 @@ import {
 } from '../../src/utils/pricing.js'
 import { authenticateRequest } from './auth.js'
 import { getRates, hasDatabase, logQuote } from './db.js'
-import { isEmailConfigured } from './email.js'
+import { getAppUrl, isEmailConfigured } from './email.js'
 import { corsHeaders, errorResponse, json, rateLimitResponse } from './http.js'
+import {
+  isCrawlerRequest,
+  renderPublicHtml,
+  wantsBrowserHtml,
+} from '../../src/utils/crawler.js'
 import {
   checkRateLimit,
   COST_PER_CALL,
@@ -38,14 +43,32 @@ async function handleHealth(request, env) {
   )
 }
 
+function publicHtmlHeaders(headers, appUrl) {
+  return {
+    ...headers,
+    'Content-Type': 'text/html; charset=utf-8',
+    Link: `<${appUrl}/>; rel="canonical"`,
+  }
+}
+
 function handleRoot(request, env) {
   const headers = corsHeaders(request, env)
-  const appUrl = (env.APP_URL || 'https://cur-sur-demo.vercel.app').replace(/\/$/, '')
-  const accept = request.headers.get('Accept') || ''
-  const wantsHtml =
-    accept.includes('text/html') && !accept.includes('application/json')
+  const appUrl = getAppUrl(env)
 
-  if (wantsHtml) {
+  // Crawlers (and unfurlers) get the public UI content at this URL — not JSON
+  // and not a redirect they may skip or snapshot before following.
+  if (isCrawlerRequest(request)) {
+    const htmlHeaders = publicHtmlHeaders(headers, appUrl)
+    if (request.method === 'HEAD') {
+      return new Response(null, { status: 200, headers: htmlHeaders })
+    }
+    return new Response(renderPublicHtml({ appUrl }), {
+      status: 200,
+      headers: htmlHeaders,
+    })
+  }
+
+  if (wantsBrowserHtml(request)) {
     const location = `${appUrl}/`
     if (request.method === 'HEAD') {
       return new Response(null, {
