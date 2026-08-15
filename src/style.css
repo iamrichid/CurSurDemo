@@ -568,10 +568,59 @@
   animation: game-pulse 1.5s ease-in-out infinite;
 }
 
-/* Crawlers and headless browsers: keep interactive UI content visible
-   even when motion / scroll-reveal would otherwise start at opacity 0. */
-html[data-crawler] [style*='opacity: 0'],
-html[data-crawler] .opacity-0 {
+/* Static HTML mirror lives outside #app so crawlers always have readable text,
+   even before Vue mounts or if JS rendering fails. */
+#site-document {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html[data-app-ready]:not([data-crawler]) #site-document {
+  display: none;
+}
+
+html[data-crawler] #site-document {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  border: 0;
+  padding: 1.5rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+/* Headless / crawler clients: force rendered Vue UI to stay readable. */
+html[data-crawler] #app *,
+html[data-crawler] #app *::before,
+html[data-crawler] #app *::after {
   opacity: 1 !important;
   transform: none !important;
+  animation: none !important;
+  transition: none !important;
+  visibility: visible !important;
+  filter: none !important;
+}
+
+html[data-crawler] .opacity-0,
+html[data-crawler] [class*='opacity-0'] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+html[data-crawler] .page-enter-active,
+html[data-crawler] .page-leave-active,
+html[data-crawler] .panel-enter-active,
+html[data-crawler] .panel-leave-active {
+  transition: none !important;
 }

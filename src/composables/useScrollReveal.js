@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue'
-import { isCrawlerClient } from '../utils/crawler.js'
+import { isCrawlerMode } from './useCrawlerMode.js'
 
 function prefersReducedMotion() {
   return (
@@ -10,7 +10,7 @@ function prefersReducedMotion() {
 
 function shouldRevealImmediately() {
   return (
-    isCrawlerClient() ||
+    isCrawlerMode() ||
     prefersReducedMotion() ||
     typeof IntersectionObserver === 'undefined'
   )

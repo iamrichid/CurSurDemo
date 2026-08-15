@@ -84,8 +84,14 @@ export function isCrawlerRequest(request) {
 }
 
 export function isCrawlerClient() {
+  if (typeof document !== 'undefined' && document.documentElement.dataset.crawler === 'true') {
+    return true
+  }
   if (typeof navigator === 'undefined') return false
   if (navigator.webdriver) return true
+  if (typeof window !== 'undefined' && (window.__playwright || window.__puppeteer__)) {
+    return true
+  }
   return isCrawlerUserAgent(navigator.userAgent || '')
 }
 

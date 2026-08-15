@@ -1,7 +1,8 @@
-import { createApp } from 'vue'
+import { createApp, nextTick } from 'vue'
 import { MotionPlugin } from '@vueuse/motion'
 import App from './App.vue'
 import router from './router'
+import { isCrawlerMode, markAppReady } from './composables/useCrawlerMode.js'
 import { isCrawlerClient } from './utils/crawler.js'
 import './style.css'
 
@@ -10,15 +11,18 @@ if (isCrawlerClient()) {
 }
 
 const app = createApp(App)
-app.use(router)
-app.use(MotionPlugin)
 
-router.isReady().then(() => {
+if (!isCrawlerMode()) {
+  app.use(MotionPlugin)
+}
+
+app.use(router)
+
+router.isReady().then(async () => {
   app.mount('#app')
-  const root = document.getElementById('app')
-  if (root) {
-    root.setAttribute('data-content-loaded', '')
-    root.setAttribute('data-app-ready', '')
+  await nextTick()
+  if (isCrawlerMode()) {
+    await new Promise((resolve) => setTimeout(resolve, 150))
   }
-  document.documentElement.dataset.appReady = 'true'
+  markAppReady(document.getElementById('app'))
 })

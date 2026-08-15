@@ -2,11 +2,25 @@
 <html lang="en" class="dark-theme">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      ;(function () {
+        var nav = window.navigator || {}
+        var ua = String(nav.userAgent || '').toLowerCase()
+        var automated =
+          nav.webdriver ||
+          /headless|bot|crawler|spider|cloudflare|lighthouse|playwright|puppeteer|bytespider|gptbot|claudebot|anthropic|prerender|preview|slurp|bingbot|googlebot/.test(
+            ua
+          )
+        if (automated) {
+          document.documentElement.setAttribute('data-crawler', 'true')
+        }
+      })()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT. Built from Night Market food delivery infrastructure for Ghanaian logistics."
+      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT for Ghanaian logistics platforms."
     />
     <link rel="canonical" href="https://cur-sur-demo.vercel.app/" />
     <meta property="og:type" content="website" />
@@ -14,13 +28,13 @@
     <meta property="og:title" content="ANY3MI — Routing & Pricing API" />
     <meta
       property="og:description"
-      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT. Built from Night Market food delivery infrastructure for Ghanaian logistics."
+      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT for Ghanaian logistics platforms."
     />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="ANY3MI — Routing & Pricing API" />
     <meta
       name="twitter:description"
-      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT. Built from Night Market food delivery infrastructure for Ghanaian logistics."
+      content="ANY3MI — Routing & pricing API by Usammi TECH DEPT for Ghanaian logistics platforms."
     />
     <script type="application/ld+json">
       {
@@ -30,7 +44,7 @@
             "@type": "SoftwareApplication",
             "name": "ANY3MI",
             "url": "https://cur-sur-demo.vercel.app/",
-            "description": "ANY3MI — Routing & pricing API by Usammi TECH DEPT. Built from Night Market food delivery infrastructure for Ghanaian logistics.",
+            "description": "ANY3MI — Routing & pricing API by Usammi TECH DEPT for Ghanaian logistics platforms.",
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "Web",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GHS" },
@@ -40,11 +54,17 @@
             "@type": "WebApplication",
             "name": "ANY3MI Playground",
             "url": "https://cur-sur-demo.vercel.app/#playground",
-            "description": "Interactive quote playground: send Accra pickup and drop-off addresses, choose bicycle, motorbike (okada), or car, and get distance, ETA, and GH₵ pricing."
+            "description": "Interactive quote playground for Accra routes with bicycle, motorbike, and car pricing in GH₵."
           }
         ]
       }
     </script>
+    <style>
+      html[data-crawler] body {
+        color: #fafafa;
+        background: #09090b;
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -54,65 +74,64 @@
     <title>ANY3MI — Routing & Pricing API</title>
   </head>
   <body>
-    <div id="app" data-content-loaded>
-      <main>
-        <header>
-          <p>ANY3MI · Usammi TECH DEPT</p>
-          <nav>
-            <a href="/">Home</a>
-            <a href="/docs">Docs</a>
-            <a href="/#playground">Playground</a>
-            <a href="/#pricing">Pricing</a>
-            <a href="/#how-it-works">How it works</a>
-            <a href="/dashboard/login?intent=key">Get API Key</a>
-          </nav>
-        </header>
-        <section id="hero">
-          <h1>The Routing &amp; Pricing API for Ghanaian Logistics</h1>
-          <p>
-            Send pickup and drop-off addresses or coordinates, get road distance, live ETAs,
-            and dynamic pricing in Ghana Cedis — for bicycles, okada, and cars. Built by
-            Usammi TECH DEPT from the Night Market delivery platform.
-          </p>
-          <p>
-            <a href="/dashboard/login?intent=key">Get API Key</a>
-            ·
-            <a href="/#playground">Try the interactive playground</a>
-            ·
-            <a href="/docs">Read the docs</a>
-          </p>
-          <ul>
-            <li>99.9% uptime</li>
-            <li>GHS-native pricing</li>
-            <li>&lt;200ms response</li>
-          </ul>
-        </section>
-        <section id="how-it-works">
-          <h2>How It Works</h2>
-          <p>Three steps from signup to live pricing on your platform.</p>
-          <ol>
-            <li>
-              <strong>Get API Key</strong> — Sign up in seconds and receive live API
-              credentials. No credit card required to start.
-            </li>
-            <li>
-              <strong>Plug in Coordinates</strong> — Send pickup and drop-off addresses (or
-              lat/lng). ANY3MI geocodes and routes server-side.
-            </li>
-            <li>
-              <strong>Get Accurate Cedi Pricing</strong> — Receive distance, duration, and a
-              dynamic GH₵ quote tailored to the vehicle type.
-            </li>
-          </ol>
-        </section>
-        <section id="playground">
-          <h2>Live Playground — Quote by address</h2>
-          <p>
-            Send pickup and drop-off addresses — ANY3MI geocodes, routes, and prices the trip
-            in Ghana Cedis. The interactive playground lets you pick bicycle, motorbike
-            (okada), or car and quote East Legon, Accra → Kwame Nkrumah Circle, Accra.
-          </p>
-          <pre><code>curl -X POST https://api.any3mi.com/v1/quote \
+    <div id="app"></div>
+    <main id="site-document" data-crawler-root data-content-loaded>
+      <header>
+        <p>ANY3MI · Usammi TECH DEPT</p>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/docs">Docs</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#pricing">Pricing</a>
+          <a href="/#how-it-works">How it works</a>
+          <a href="/dashboard/login?intent=key">Get API Key</a>
+        </nav>
+      </header>
+      <section id="hero">
+        <h1>The Routing &amp; Pricing API for Ghanaian Logistics</h1>
+        <p>
+          Send pickup and drop-off addresses or coordinates, get road distance, live ETAs,
+          and dynamic pricing in Ghana Cedis — for bicycles, okada, and cars.
+        </p>
+        <p>
+          <a href="/dashboard/login?intent=key">Get API Key</a>
+          ·
+          <a href="/#playground">Try the interactive playground</a>
+          ·
+          <a href="/docs">Read the docs</a>
+        </p>
+        <ul>
+          <li>99.9% uptime</li>
+          <li>GHS-native pricing</li>
+          <li>&lt;200ms response</li>
+        </ul>
+      </section>
+      <section id="how-it-works">
+        <h2>How It Works</h2>
+        <p>Three steps from signup to live pricing on your platform.</p>
+        <ol>
+          <li>
+            <strong>Get API Key</strong> — Sign up in seconds and receive live API
+            credentials. No credit card required to start.
+          </li>
+          <li>
+            <strong>Plug in Coordinates</strong> — Send pickup and drop-off addresses (or
+            lat/lng). ANY3MI geocodes and routes server-side.
+          </li>
+          <li>
+            <strong>Get Accurate Cedi Pricing</strong> — Receive distance, duration, and a
+            dynamic GH₵ quote tailored to the vehicle type.
+          </li>
+        </ol>
+      </section>
+      <section id="playground">
+        <h2>Live Playground — Quote by address</h2>
+        <p>
+          Send pickup and drop-off addresses — ANY3MI geocodes, routes, and prices the trip
+          in Ghana Cedis. Pick bicycle, motorbike (okada), or car and quote East Legon, Accra
+          → Kwame Nkrumah Circle, Accra.
+        </p>
+        <pre><code>curl -X POST https://api.any3mi.com/v1/quote \
   -H "Authorization: Bearer a3_live_sk_abc123" \
   -H "Content-Type: application/json" \
   -d '{
@@ -120,44 +139,42 @@
     "destination": { "address": "Kwame Nkrumah Circle, Accra" },
     "vehicle": "motorbike"
   }'</code></pre>
-          <p>Example response: GH₵ 29.12 · 8.4 km · 24 min · Motorbike (Okada).</p>
-        </section>
-        <section id="pricing">
-          <h2>Simple, Transparent Pricing</h2>
-          <p>
-            Start free, then pay only for what you use. No hidden fees, no monthly minimums.
-            GH₵ native — no USD conversion fees.
-          </p>
-          <h3>Free Tier — GH₵ 0 forever</h3>
-          <ul>
-            <li>500 API calls / month</li>
-            <li>All vehicle types</li>
-            <li>Accra metro coverage</li>
-          </ul>
-          <h3>Pay-As-You-Go — GH₵ 0.10 per API call</h3>
-          <ul>
-            <li>Unlimited API calls</li>
-            <li>Nationwide coverage</li>
-            <li>Custom pricing matrix</li>
-            <li>MoMo wallet billing</li>
-          </ul>
-        </section>
-        <section id="docs">
-          <h2>API</h2>
-          <p>
-            ANY3MI is the routing and pricing REST API developed by Usammi TECH DEPT —
-            extracted from the infrastructure that powers Night Market food delivery across
-            Ghana.
-          </p>
-          <ul>
-            <li><code>POST /v1/quote</code> — Get a pricing quote for a route</li>
-            <li><code>GET /v1/health</code> — Check API status</li>
-            <li><code>GET /v1/rates</code> — Retrieve your pricing matrix</li>
-          </ul>
-          <p><a href="/docs">Full interactive documentation</a></p>
-        </section>
-      </main>
-    </div>
+        <p>Example response: GH₵ 29.12 · 8.4 km · 24 min · Motorbike (Okada).</p>
+      </section>
+      <section id="pricing">
+        <h2>Simple, Transparent Pricing</h2>
+        <p>
+          Start free, then pay only for what you use. No hidden fees, no monthly minimums.
+          GH₵ native — no USD conversion fees.
+        </p>
+        <h3>Free Tier — GH₵ 0 forever</h3>
+        <ul>
+          <li>500 API calls / month</li>
+          <li>All vehicle types</li>
+          <li>Accra metro coverage</li>
+        </ul>
+        <h3>Pay-As-You-Go — GH₵ 0.10 per API call</h3>
+        <ul>
+          <li>Unlimited API calls</li>
+          <li>Nationwide coverage</li>
+          <li>Custom pricing matrix</li>
+          <li>MoMo wallet billing</li>
+        </ul>
+      </section>
+      <section id="docs">
+        <h2>API</h2>
+        <p>
+          ANY3MI is the routing and pricing REST API developed by Usammi TECH DEPT for
+          Ghanaian logistics apps.
+        </p>
+        <ul>
+          <li><code>POST /v1/quote</code> — Get a pricing quote for a route</li>
+          <li><code>GET /v1/health</code> — Check API status</li>
+          <li><code>GET /v1/rates</code> — Retrieve your pricing matrix</li>
+        </ul>
+        <p><a href="/docs">Full interactive documentation</a></p>
+      </section>
+    </main>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
